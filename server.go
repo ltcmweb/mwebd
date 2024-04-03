@@ -1,7 +1,7 @@
 package mwebd
 
 import (
-	context "context"
+	"context"
 	"fmt"
 	"net"
 	"slices"

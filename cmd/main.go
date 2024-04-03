@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"os"
 	"path/filepath"
 	"time"
@@ -13,28 +14,44 @@ import (
 	"github.com/ltcsuite/neutrino"
 )
 
-func main() {
-	dataDir := "regtest"
+var (
+	chain   = flag.String("c", "mainnet", "Chain")
+	dataDir = flag.String("d", ".", "Data directory")
+	peer    = flag.String("a", "", "Connect to peer")
+	port    = flag.Int("p", 1234, "Listen port")
+)
 
+func main() {
+	flag.Parse()
 	backend := btclog.NewBackend(os.Stdout)
 	log := backend.Logger("LTCN")
 	neutrino.UseLogger(log)
 
 	db, err := walletdb.Create(
-		"bdb", filepath.Join(dataDir, "neutrino.db"), true, time.Minute)
+		"bdb", filepath.Join(*dataDir, "neutrino.db"), true, time.Minute)
 	if err != nil {
 		log.Errorf("Unable to create Neutrino DB: %v", err)
 		return
 	}
 	defer db.Close()
 
-	chainService, err := neutrino.NewChainService(
-		neutrino.Config{
-			DataDir:     dataDir,
-			Database:    db,
-			ChainParams: chaincfg.RegressionNetParams,
-			AddPeers:    []string{"127.0.0.1:19444"},
-		})
+	chainParams := chaincfg.MainNetParams
+	switch *chain {
+	case chaincfg.TestNet4Params.Name:
+		chainParams = chaincfg.TestNet4Params
+	case chaincfg.RegressionNetParams.Name:
+		chainParams = chaincfg.RegressionNetParams
+	}
+
+	cfg := neutrino.Config{
+		DataDir:     *dataDir,
+		Database:    db,
+		ChainParams: chainParams,
+	}
+	if *peer != "" {
+		cfg.AddPeers = []string{*peer}
+	}
+	chainService, err := neutrino.NewChainService(cfg)
 	if err != nil {
 		log.Errorf("Couldn't create Neutrino ChainService: %v", err)
 		return
@@ -42,7 +59,7 @@ func main() {
 	chainService.Start()
 
 	server := &mwebd.Server{
-		Port: 1234,
+		Port: *port,
 		CS:   chainService,
 		Log:  backend.Logger("RPCS"),
 	}
