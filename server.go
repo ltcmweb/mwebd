@@ -1,6 +1,7 @@
 package mwebd
 
 import (
+	context "context"
 	"fmt"
 	"net"
 	"slices"
@@ -126,4 +127,20 @@ done:
 	delete(s.utxoChan, scanSecret)
 	s.mtx.Unlock()
 	return
+}
+
+func (s *Server) Addresses(ctx context.Context,
+	req *AddressRequest) (*AddressResponse, error) {
+
+	keychain := &mweb.Keychain{
+		Scan:        (*mw.SecretKey)(req.ScanSecret),
+		SpendPubKey: (*mw.PublicKey)(req.SpendPubkey),
+	}
+	resp := &AddressResponse{}
+	for i := req.FromIndex; i < req.ToIndex; i++ {
+		chainParams := s.CS.ChainParams()
+		addr := ltcutil.NewAddressMweb(keychain.Address(i), &chainParams)
+		resp.Address = append(resp.Address, addr.String())
+	}
+	return resp, nil
 }

@@ -4,6 +4,7 @@ option go_package = "github.com/ltcsuite/mwebd";
 
 service Rpc {
     rpc Utxos(UtxosRequest) returns (stream Utxo);
+    rpc Addresses(AddressRequest) returns (AddressResponse);
 }
 
 message UtxosRequest {
@@ -16,4 +17,15 @@ message Utxo {
     uint64 value = 2;
     string address = 3;
     string output_id = 4;
+}
+
+message AddressRequest {
+    uint32 from_index = 1;
+    uint32 to_index = 2;
+    bytes scan_secret = 3;
+    bytes spend_pubkey = 4;
+}
+
+message AddressResponse {
+    repeated string address = 1;
 }
