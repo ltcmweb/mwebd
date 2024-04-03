@@ -3,6 +3,7 @@ package mwebd
 import (
 	"fmt"
 	"net"
+	"slices"
 	"sync"
 
 	"github.com/btcsuite/btclog"
@@ -43,28 +44,75 @@ func (s *Server) utxoHandler(lfs *mweb.Leafset, utxos []*wire.MwebNetUtxo) {
 	defer s.mtx.Unlock()
 
 	for scanSecret, ch := range s.utxoChan {
-		for _, utxo := range utxos {
-			coin, err := mweb.RewindOutput(utxo.Output, scanSecret)
-			if err != nil {
-				continue
-			}
-			chainParams := s.CS.ChainParams()
-			addr := ltcutil.NewAddressMweb(coin.Address, &chainParams)
-			ch <- &Utxo{
-				Height:   utxo.Height,
-				OutputId: utxo.OutputId.String(),
-				Value:    coin.Value,
-				Address:  addr.String(),
-			}
+		for _, utxo := range s.filterUtxos(scanSecret, utxos) {
+			ch <- utxo
 		}
 	}
 }
 
+func (s *Server) filterUtxos(scanSecret *mw.SecretKey,
+	utxos []*wire.MwebNetUtxo) (result []*Utxo) {
+
+	for _, utxo := range utxos {
+		coin, err := mweb.RewindOutput(utxo.Output, scanSecret)
+		if err != nil {
+			continue
+		}
+		chainParams := s.CS.ChainParams()
+		addr := ltcutil.NewAddressMweb(coin.Address, &chainParams)
+		result = append(result, &Utxo{
+			Height:   utxo.Height,
+			Value:    coin.Value,
+			Address:  addr.String(),
+			OutputId: utxo.OutputId.String(),
+		})
+	}
+	return
+}
+
 func (s *Server) Utxos(req *UtxosRequest, stream Rpc_UtxosServer) (err error) {
+	scanSecret := (*mw.SecretKey)(req.ScanSecret)
 	ch := make(chan *Utxo)
 	s.mtx.Lock()
-	s.utxoChan[(*mw.SecretKey)(req.ScanSecret)] = ch
+	s.utxoChan[scanSecret] = ch
 	s.mtx.Unlock()
+
+	heightMap, err := s.CS.MwebCoinDB.GetLeavesAtHeight()
+	if err != nil {
+		return err
+	}
+	var heights []uint32
+	for height := range heightMap {
+		heights = append(heights, height)
+	}
+	slices.Sort(heights)
+	index, _ := slices.BinarySearch(heights, uint32(req.FromHeight))
+	leaf := uint64(0)
+	if index > 0 {
+		leaf = heightMap[heights[index-1]]
+	}
+
+	lfs, err := s.CS.MwebCoinDB.GetLeafset()
+	if err != nil {
+		return err
+	}
+	var leaves []uint64
+	for ; leaf < lfs.Size; leaf++ {
+		if lfs.Contains(leaf) {
+			leaves = append(leaves, leaf)
+		}
+	}
+
+	utxos, err := s.CS.MwebCoinDB.FetchLeaves(leaves)
+	if err != nil {
+		return err
+	}
+	for _, utxo := range s.filterUtxos(scanSecret, utxos) {
+		if err = stream.Send(utxo); err != nil {
+			s.Log.Errorf("Failed to send: %v", err)
+			goto done
+		}
+	}
 
 	for {
 		if err = stream.Send(<-ch); err != nil {
@@ -73,8 +121,9 @@ func (s *Server) Utxos(req *UtxosRequest, stream Rpc_UtxosServer) (err error) {
 		}
 	}
 
+done:
 	s.mtx.Lock()
-	delete(s.utxoChan, (*mw.SecretKey)(req.ScanSecret))
+	delete(s.utxoChan, scanSecret)
 	s.mtx.Unlock()
 	return
 }
