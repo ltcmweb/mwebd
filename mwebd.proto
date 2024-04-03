@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+option go_package = "github.com/ltcsuite/mwebd";
+
+service Rpc {
+    rpc Utxos(UtxosRequest) returns (stream Utxo);
+}
+
+message UtxosRequest {
+    int32 from_height = 1;
+    bytes scan_secret = 2;
+}
+
+message Utxo {
+    int32 height = 1;
+    uint64 value = 2;
+    string address = 3;
+    string output_id = 4;
+}
