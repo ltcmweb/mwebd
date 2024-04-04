@@ -6,6 +6,7 @@ service Rpc {
     rpc Utxos(UtxosRequest) returns (stream Utxo);
     rpc Addresses(AddressRequest) returns (AddressResponse);
     rpc Spent(SpentRequest) returns (SpentResponse);
+    rpc Create(CreateRequest) returns (CreateResponse);
 }
 
 message UtxosRequest {
@@ -37,4 +38,16 @@ message SpentRequest {
 
 message SpentResponse {
     repeated string output_id = 1;
+}
+
+message CreateRequest {
+    bytes raw_tx = 1;
+    bytes scan_secret = 2;
+    bytes spend_secret = 3;
+    uint64 fee_rate_per_kb = 4;
+}
+
+message CreateResponse {
+    bytes raw_tx = 1;
+    repeated string output_id = 2;
 }

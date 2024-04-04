@@ -1,6 +1,7 @@
 package mwebd
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net"
@@ -12,8 +13,10 @@ import (
 	"github.com/ltcsuite/ltcd/ltcutil"
 	"github.com/ltcsuite/ltcd/ltcutil/mweb"
 	"github.com/ltcsuite/ltcd/ltcutil/mweb/mw"
+	"github.com/ltcsuite/ltcd/txscript"
 	"github.com/ltcsuite/ltcd/wire"
 	"github.com/ltcsuite/neutrino"
+	"github.com/ltcsuite/neutrino/mwebdb"
 	"google.golang.org/grpc"
 )
 
@@ -159,5 +162,99 @@ func (s *Server) Spent(ctx context.Context,
 			resp.OutputId = append(resp.OutputId, outputIdStr)
 		}
 	}
+	return resp, nil
+}
+
+func (s *Server) Create(ctx context.Context,
+	req *CreateRequest) (*CreateResponse, error) {
+
+	var (
+		tx         wire.MsgTx
+		txIns      []*wire.TxIn
+		pegouts    []*wire.TxOut
+		coins      []*mweb.Coin
+		recipients []*mweb.Recipient
+		pegin      uint64
+		sumCoins   uint64
+		sumOutputs uint64
+	)
+
+	err := tx.Deserialize(bytes.NewReader(req.RawTx))
+	if err != nil {
+		return nil, err
+	}
+
+	for _, txIn := range tx.TxIn {
+		output, err := s.CS.MwebCoinDB.FetchCoin(&txIn.PreviousOutPoint.Hash)
+		switch err {
+		case nil:
+			coin, err := mweb.RewindOutput(output, (*mw.SecretKey)(req.ScanSecret))
+			if err != nil {
+				return nil, err
+			}
+
+			coin.CalculateOutputKey((*mw.SecretKey)(req.SpendSecret))
+			coins = append(coins, coin)
+			sumCoins += coin.Value
+
+		case mwebdb.ErrCoinNotFound:
+			txIns = append(txIns, txIn)
+
+		default:
+			return nil, err
+		}
+	}
+
+	for _, txOut := range tx.TxOut {
+		sumOutputs += uint64(txOut.Value)
+		if !txscript.IsMweb(txOut.PkScript) {
+			pegouts = append(pegouts, txOut)
+			continue
+		}
+
+		chainParams := s.CS.ChainParams()
+		_, addrs, _, err := txscript.ExtractPkScriptAddrs(
+			txOut.PkScript, &chainParams)
+		if err != nil {
+			return nil, err
+		}
+
+		recipients = append(recipients, &mweb.Recipient{
+			Value:   uint64(txOut.Value),
+			Address: addrs[0].(*ltcutil.AddressMweb).StealthAddress(),
+		})
+	}
+
+	if len(coins) == 0 && len(recipients) == 0 {
+		return &CreateResponse{RawTx: req.RawTx}, nil
+	}
+
+	fee := mweb.EstimateFee(tx.TxOut, ltcutil.Amount(req.FeeRatePerKb), false)
+	if sumOutputs+fee > sumCoins {
+		pegin = sumOutputs + fee - sumCoins
+	}
+
+	tx.Mweb, coins, err =
+		mweb.NewTransaction(coins, recipients, fee, pegin, pegouts)
+	if err != nil {
+		return nil, err
+	}
+
+	tx.TxIn = txIns
+	tx.TxOut = nil
+	if pegin > 0 {
+		tx.AddTxOut(mweb.NewPegin(pegin, tx.Mweb.TxBody.Kernels[0]))
+	}
+
+	var buf bytes.Buffer
+	if err = tx.Serialize(&buf); err != nil {
+		return nil, err
+	}
+
+	resp := &CreateResponse{RawTx: buf.Bytes()}
+	for _, coin := range coins {
+		resp.OutputId = append(resp.OutputId, coin.OutputId.String())
+	}
+
 	return resp, nil
 }
