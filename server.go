@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/btcsuite/btclog"
+	"github.com/ltcsuite/ltcd/chaincfg/chainhash"
 	"github.com/ltcsuite/ltcd/ltcutil"
 	"github.com/ltcsuite/ltcd/ltcutil/mweb"
 	"github.com/ltcsuite/ltcd/ltcutil/mweb/mw"
@@ -141,6 +142,22 @@ func (s *Server) Addresses(ctx context.Context,
 		chainParams := s.CS.ChainParams()
 		addr := ltcutil.NewAddressMweb(keychain.Address(i), &chainParams)
 		resp.Address = append(resp.Address, addr.String())
+	}
+	return resp, nil
+}
+
+func (s *Server) Spent(ctx context.Context,
+	req *SpentRequest) (*SpentResponse, error) {
+
+	resp := &SpentResponse{}
+	for _, outputIdStr := range req.OutputId {
+		outputId, err := chainhash.NewHashFromStr(outputIdStr)
+		if err != nil {
+			return nil, err
+		}
+		if !s.CS.MwebUtxoExists(outputId) {
+			resp.OutputId = append(resp.OutputId, outputIdStr)
+		}
 	}
 	return resp, nil
 }

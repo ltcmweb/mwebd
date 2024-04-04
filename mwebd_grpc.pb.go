@@ -21,6 +21,7 @@ const _ = grpc.SupportPackageIsVersion7
 const (
 	Rpc_Utxos_FullMethodName     = "/Rpc/Utxos"
 	Rpc_Addresses_FullMethodName = "/Rpc/Addresses"
+	Rpc_Spent_FullMethodName     = "/Rpc/Spent"
 )
 
 // RpcClient is the client API for Rpc service.
@@ -29,6 +30,7 @@ const (
 type RpcClient interface {
 	Utxos(ctx context.Context, in *UtxosRequest, opts ...grpc.CallOption) (Rpc_UtxosClient, error)
 	Addresses(ctx context.Context, in *AddressRequest, opts ...grpc.CallOption) (*AddressResponse, error)
+	Spent(ctx context.Context, in *SpentRequest, opts ...grpc.CallOption) (*SpentResponse, error)
 }
 
 type rpcClient struct {
@@ -80,12 +82,22 @@ func (c *rpcClient) Addresses(ctx context.Context, in *AddressRequest, opts ...g
 	return out, nil
 }
 
+func (c *rpcClient) Spent(ctx context.Context, in *SpentRequest, opts ...grpc.CallOption) (*SpentResponse, error) {
+	out := new(SpentResponse)
+	err := c.cc.Invoke(ctx, Rpc_Spent_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // RpcServer is the server API for Rpc service.
 // All implementations must embed UnimplementedRpcServer
 // for forward compatibility
 type RpcServer interface {
 	Utxos(*UtxosRequest, Rpc_UtxosServer) error
 	Addresses(context.Context, *AddressRequest) (*AddressResponse, error)
+	Spent(context.Context, *SpentRequest) (*SpentResponse, error)
 	mustEmbedUnimplementedRpcServer()
 }
 
@@ -98,6 +110,9 @@ func (UnimplementedRpcServer) Utxos(*UtxosRequest, Rpc_UtxosServer) error {
 }
 func (UnimplementedRpcServer) Addresses(context.Context, *AddressRequest) (*AddressResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Addresses not implemented")
+}
+func (UnimplementedRpcServer) Spent(context.Context, *SpentRequest) (*SpentResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Spent not implemented")
 }
 func (UnimplementedRpcServer) mustEmbedUnimplementedRpcServer() {}
 
@@ -151,6 +166,24 @@ func _Rpc_Addresses_Handler(srv interface{}, ctx context.Context, dec func(inter
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Rpc_Spent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SpentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RpcServer).Spent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Rpc_Spent_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RpcServer).Spent(ctx, req.(*SpentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Rpc_ServiceDesc is the grpc.ServiceDesc for Rpc service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -161,6 +194,10 @@ var Rpc_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Addresses",
 			Handler:    _Rpc_Addresses_Handler,
+		},
+		{
+			MethodName: "Spent",
+			Handler:    _Rpc_Spent_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
