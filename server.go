@@ -3,6 +3,7 @@ package mwebd
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"fmt"
 	"net"
 	"slices"
@@ -69,7 +70,7 @@ func (s *Server) filterUtxos(scanSecret *mw.SecretKey,
 			Height:   utxo.Height,
 			Value:    coin.Value,
 			Address:  addr.String(),
-			OutputId: utxo.OutputId.String(),
+			OutputId: hex.EncodeToString(utxo.OutputId[:]),
 		})
 	}
 	return
@@ -154,11 +155,11 @@ func (s *Server) Spent(ctx context.Context,
 
 	resp := &SpentResponse{}
 	for _, outputIdStr := range req.OutputId {
-		outputId, err := chainhash.NewHashFromStr(outputIdStr)
+		outputId, err := hex.DecodeString(outputIdStr)
 		if err != nil {
 			return nil, err
 		}
-		if !s.CS.MwebUtxoExists(outputId) {
+		if !s.CS.MwebUtxoExists((*chainhash.Hash)(outputId)) {
 			resp.OutputId = append(resp.OutputId, outputIdStr)
 		}
 	}
@@ -253,7 +254,7 @@ func (s *Server) Create(ctx context.Context,
 
 	resp := &CreateResponse{RawTx: buf.Bytes()}
 	for _, coin := range coins {
-		resp.OutputId = append(resp.OutputId, coin.OutputId.String())
+		resp.OutputId = append(resp.OutputId, hex.EncodeToString(coin.OutputId[:]))
 	}
 
 	return resp, nil
