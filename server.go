@@ -27,7 +27,7 @@ type Server struct {
 	CS       *neutrino.ChainService
 	Log      btclog.Logger
 	mtx      sync.Mutex
-	utxoChan map[*mw.SecretKey]chan *Utxo
+	utxoChan map[*mw.SecretKey][]chan *Utxo
 }
 
 func (s *Server) Start() {
@@ -37,7 +37,7 @@ func (s *Server) Start() {
 		return
 	}
 
-	s.utxoChan = map[*mw.SecretKey]chan *Utxo{}
+	s.utxoChan = map[*mw.SecretKey][]chan *Utxo{}
 	s.CS.RegisterMwebUtxosCallback(s.utxoHandler)
 
 	server := grpc.NewServer()
@@ -51,7 +51,10 @@ func (s *Server) utxoHandler(lfs *mweb.Leafset, utxos []*wire.MwebNetUtxo) {
 
 	for scanSecret, ch := range s.utxoChan {
 		for _, utxo := range s.filterUtxos(scanSecret, utxos) {
-			ch <- utxo
+			select {
+			case ch[0] <- utxo:
+			case <-ch[1]:
+			}
 		}
 	}
 }
@@ -78,9 +81,9 @@ func (s *Server) filterUtxos(scanSecret *mw.SecretKey,
 
 func (s *Server) Utxos(req *UtxosRequest, stream Rpc_UtxosServer) (err error) {
 	scanSecret := (*mw.SecretKey)(req.ScanSecret)
-	ch := make(chan *Utxo)
+	ch, quit := make(chan *Utxo), make(chan *Utxo)
 	s.mtx.Lock()
-	s.utxoChan[scanSecret] = ch
+	s.utxoChan[scanSecret] = []chan *Utxo{ch, quit}
 	s.mtx.Unlock()
 
 	heightMap, err := s.CS.MwebCoinDB.GetLeavesAtHeight()
@@ -128,6 +131,7 @@ func (s *Server) Utxos(req *UtxosRequest, stream Rpc_UtxosServer) (err error) {
 	}
 
 done:
+	close(quit)
 	s.mtx.Lock()
 	delete(s.utxoChan, scanSecret)
 	s.mtx.Unlock()
