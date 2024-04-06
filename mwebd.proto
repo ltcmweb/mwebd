@@ -3,10 +3,20 @@ syntax = "proto3";
 option go_package = "github.com/ltcsuite/mwebd";
 
 service Rpc {
+    rpc Status(StatusRequest) returns (StatusResponse);
     rpc Utxos(UtxosRequest) returns (stream Utxo);
     rpc Addresses(AddressRequest) returns (AddressResponse);
     rpc Spent(SpentRequest) returns (SpentResponse);
     rpc Create(CreateRequest) returns (CreateResponse);
+}
+
+message StatusRequest {
+}
+
+message StatusResponse {
+    int32 block_header_height = 1;
+    int32 mweb_header_height = 2;
+    int32 mweb_utxos_height = 3;
 }
 
 message UtxosRequest {

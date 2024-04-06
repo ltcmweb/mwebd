@@ -19,6 +19,7 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
+	Rpc_Status_FullMethodName    = "/Rpc/Status"
 	Rpc_Utxos_FullMethodName     = "/Rpc/Utxos"
 	Rpc_Addresses_FullMethodName = "/Rpc/Addresses"
 	Rpc_Spent_FullMethodName     = "/Rpc/Spent"
@@ -29,6 +30,7 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type RpcClient interface {
+	Status(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (*StatusResponse, error)
 	Utxos(ctx context.Context, in *UtxosRequest, opts ...grpc.CallOption) (Rpc_UtxosClient, error)
 	Addresses(ctx context.Context, in *AddressRequest, opts ...grpc.CallOption) (*AddressResponse, error)
 	Spent(ctx context.Context, in *SpentRequest, opts ...grpc.CallOption) (*SpentResponse, error)
@@ -41,6 +43,15 @@ type rpcClient struct {
 
 func NewRpcClient(cc grpc.ClientConnInterface) RpcClient {
 	return &rpcClient{cc}
+}
+
+func (c *rpcClient) Status(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (*StatusResponse, error) {
+	out := new(StatusResponse)
+	err := c.cc.Invoke(ctx, Rpc_Status_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *rpcClient) Utxos(ctx context.Context, in *UtxosRequest, opts ...grpc.CallOption) (Rpc_UtxosClient, error) {
@@ -106,6 +117,7 @@ func (c *rpcClient) Create(ctx context.Context, in *CreateRequest, opts ...grpc.
 // All implementations must embed UnimplementedRpcServer
 // for forward compatibility
 type RpcServer interface {
+	Status(context.Context, *StatusRequest) (*StatusResponse, error)
 	Utxos(*UtxosRequest, Rpc_UtxosServer) error
 	Addresses(context.Context, *AddressRequest) (*AddressResponse, error)
 	Spent(context.Context, *SpentRequest) (*SpentResponse, error)
@@ -117,6 +129,9 @@ type RpcServer interface {
 type UnimplementedRpcServer struct {
 }
 
+func (UnimplementedRpcServer) Status(context.Context, *StatusRequest) (*StatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Status not implemented")
+}
 func (UnimplementedRpcServer) Utxos(*UtxosRequest, Rpc_UtxosServer) error {
 	return status.Errorf(codes.Unimplemented, "method Utxos not implemented")
 }
@@ -140,6 +155,24 @@ type UnsafeRpcServer interface {
 
 func RegisterRpcServer(s grpc.ServiceRegistrar, srv RpcServer) {
 	s.RegisterService(&Rpc_ServiceDesc, srv)
+}
+
+func _Rpc_Status_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RpcServer).Status(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Rpc_Status_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RpcServer).Status(ctx, req.(*StatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _Rpc_Utxos_Handler(srv interface{}, stream grpc.ServerStream) error {
@@ -224,6 +257,10 @@ var Rpc_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "Rpc",
 	HandlerType: (*RpcServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Status",
+			Handler:    _Rpc_Status_Handler,
+		},
 		{
 			MethodName: "Addresses",
 			Handler:    _Rpc_Addresses_Handler,

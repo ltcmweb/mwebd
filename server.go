@@ -45,6 +45,36 @@ func (s *Server) Start() {
 	server.Serve(lis)
 }
 
+func (s *Server) Status(context.Context, *StatusRequest) (*StatusResponse, error) {
+	bs, err := s.CS.BestBlock()
+	if err != nil {
+		return nil, err
+	}
+
+	heightMap, err := s.CS.MwebCoinDB.GetLeavesAtHeight()
+	if err != nil {
+		return nil, err
+	}
+
+	var mhHeight uint32
+	for height := range heightMap {
+		if height > mhHeight {
+			mhHeight = height
+		}
+	}
+
+	lfs, err := s.CS.MwebCoinDB.GetLeafset()
+	if err != nil {
+		return nil, err
+	}
+
+	return &StatusResponse{
+		BlockHeaderHeight: bs.Height,
+		MwebHeaderHeight:  int32(mhHeight),
+		MwebUtxosHeight:   int32(lfs.Height),
+	}, nil
+}
+
 func (s *Server) utxoHandler(lfs *mweb.Leafset, utxos []*wire.MwebNetUtxo) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
