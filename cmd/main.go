@@ -17,8 +17,8 @@ import (
 var (
 	chain   = flag.String("c", "mainnet", "Chain")
 	dataDir = flag.String("d", ".", "Data directory")
-	peer    = flag.String("a", "", "Connect to peer")
-	port    = flag.Int("p", 1234, "Listen port")
+	peer    = flag.String("p", "", "Connect to peer")
+	port    = flag.Int("l", 12345, "Listen port")
 )
 
 func main() {
@@ -35,22 +35,21 @@ func main() {
 	}
 	defer db.Close()
 
-	chainParams := chaincfg.MainNetParams
-	switch *chain {
-	case chaincfg.TestNet4Params.Name:
-		chainParams = chaincfg.TestNet4Params
-	case chaincfg.RegressionNetParams.Name:
-		chainParams = chaincfg.RegressionNetParams
-	}
-
 	cfg := neutrino.Config{
 		DataDir:     *dataDir,
 		Database:    db,
-		ChainParams: chainParams,
+		ChainParams: chaincfg.MainNetParams,
+	}
+	switch *chain {
+	case chaincfg.TestNet4Params.Name, "testnet":
+		cfg.ChainParams = chaincfg.TestNet4Params
+	case chaincfg.RegressionNetParams.Name:
+		cfg.ChainParams = chaincfg.RegressionNetParams
 	}
 	if *peer != "" {
 		cfg.AddPeers = []string{*peer}
 	}
+
 	chainService, err := neutrino.NewChainService(cfg)
 	if err != nil {
 		log.Errorf("Couldn't create Neutrino ChainService: %v", err)

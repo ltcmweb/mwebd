@@ -293,3 +293,16 @@ func (s *Server) Create(ctx context.Context,
 
 	return resp, nil
 }
+
+func (s *Server) Broadcast(ctx context.Context,
+	req *BroadcastRequest) (*BroadcastResponse, error) {
+
+	var tx wire.MsgTx
+	if err := tx.Deserialize(bytes.NewReader(req.RawTx)); err != nil {
+		return nil, err
+	}
+	if err := s.CS.SendTransaction(&tx); err != nil {
+		return nil, err
+	}
+	return &BroadcastResponse{Txid: tx.TxHash().String()}, nil
+}

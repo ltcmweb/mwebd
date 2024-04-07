@@ -8,6 +8,7 @@ service Rpc {
     rpc Addresses(AddressRequest) returns (AddressResponse);
     rpc Spent(SpentRequest) returns (SpentResponse);
     rpc Create(CreateRequest) returns (CreateResponse);
+    rpc Broadcast(BroadcastRequest) returns (BroadcastResponse);
 }
 
 message StatusRequest {
@@ -60,4 +61,12 @@ message CreateRequest {
 message CreateResponse {
     bytes raw_tx = 1;
     repeated string output_id = 2;
+}
+
+message BroadcastRequest {
+    bytes raw_tx = 1;
+}
+
+message BroadcastResponse {
+    string txid = 1;
 }

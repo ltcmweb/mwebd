@@ -24,6 +24,7 @@ const (
 	Rpc_Addresses_FullMethodName = "/Rpc/Addresses"
 	Rpc_Spent_FullMethodName     = "/Rpc/Spent"
 	Rpc_Create_FullMethodName    = "/Rpc/Create"
+	Rpc_Broadcast_FullMethodName = "/Rpc/Broadcast"
 )
 
 // RpcClient is the client API for Rpc service.
@@ -35,6 +36,7 @@ type RpcClient interface {
 	Addresses(ctx context.Context, in *AddressRequest, opts ...grpc.CallOption) (*AddressResponse, error)
 	Spent(ctx context.Context, in *SpentRequest, opts ...grpc.CallOption) (*SpentResponse, error)
 	Create(ctx context.Context, in *CreateRequest, opts ...grpc.CallOption) (*CreateResponse, error)
+	Broadcast(ctx context.Context, in *BroadcastRequest, opts ...grpc.CallOption) (*BroadcastResponse, error)
 }
 
 type rpcClient struct {
@@ -113,6 +115,15 @@ func (c *rpcClient) Create(ctx context.Context, in *CreateRequest, opts ...grpc.
 	return out, nil
 }
 
+func (c *rpcClient) Broadcast(ctx context.Context, in *BroadcastRequest, opts ...grpc.CallOption) (*BroadcastResponse, error) {
+	out := new(BroadcastResponse)
+	err := c.cc.Invoke(ctx, Rpc_Broadcast_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // RpcServer is the server API for Rpc service.
 // All implementations must embed UnimplementedRpcServer
 // for forward compatibility
@@ -122,6 +133,7 @@ type RpcServer interface {
 	Addresses(context.Context, *AddressRequest) (*AddressResponse, error)
 	Spent(context.Context, *SpentRequest) (*SpentResponse, error)
 	Create(context.Context, *CreateRequest) (*CreateResponse, error)
+	Broadcast(context.Context, *BroadcastRequest) (*BroadcastResponse, error)
 	mustEmbedUnimplementedRpcServer()
 }
 
@@ -143,6 +155,9 @@ func (UnimplementedRpcServer) Spent(context.Context, *SpentRequest) (*SpentRespo
 }
 func (UnimplementedRpcServer) Create(context.Context, *CreateRequest) (*CreateResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Create not implemented")
+}
+func (UnimplementedRpcServer) Broadcast(context.Context, *BroadcastRequest) (*BroadcastResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Broadcast not implemented")
 }
 func (UnimplementedRpcServer) mustEmbedUnimplementedRpcServer() {}
 
@@ -250,6 +265,24 @@ func _Rpc_Create_Handler(srv interface{}, ctx context.Context, dec func(interfac
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Rpc_Broadcast_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BroadcastRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RpcServer).Broadcast(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Rpc_Broadcast_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RpcServer).Broadcast(ctx, req.(*BroadcastRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Rpc_ServiceDesc is the grpc.ServiceDesc for Rpc service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -272,6 +305,10 @@ var Rpc_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Create",
 			Handler:    _Rpc_Create_Handler,
+		},
+		{
+			MethodName: "Broadcast",
+			Handler:    _Rpc_Broadcast_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
