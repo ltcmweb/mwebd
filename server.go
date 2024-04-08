@@ -200,6 +200,15 @@ func (s *Server) Spent(ctx context.Context,
 	return resp, nil
 }
 
+func (s *Server) fetchCoin(outputId chainhash.Hash) (*wire.MwebOutput, error) {
+	output, err := s.CS.MwebCoinDB.FetchCoin(&outputId)
+	if err == mwebdb.ErrCoinNotFound {
+		slices.Reverse(outputId[:])
+		output, err = s.CS.MwebCoinDB.FetchCoin(&outputId)
+	}
+	return output, err
+}
+
 func (s *Server) Create(ctx context.Context,
 	req *CreateRequest) (*CreateResponse, error) {
 
@@ -219,16 +228,21 @@ func (s *Server) Create(ctx context.Context,
 		return nil, err
 	}
 
+	keychain := &mweb.Keychain{
+		Scan:  (*mw.SecretKey)(req.ScanSecret),
+		Spend: (*mw.SecretKey)(req.SpendSecret),
+	}
+
 	for _, txIn := range tx.TxIn {
-		output, err := s.CS.MwebCoinDB.FetchCoin(&txIn.PreviousOutPoint.Hash)
+		output, err := s.fetchCoin(txIn.PreviousOutPoint.Hash)
 		switch err {
 		case nil:
-			coin, err := mweb.RewindOutput(output, (*mw.SecretKey)(req.ScanSecret))
+			coin, err := mweb.RewindOutput(output, keychain.Scan)
 			if err != nil {
 				return nil, err
 			}
 
-			coin.CalculateOutputKey((*mw.SecretKey)(req.SpendSecret))
+			coin.CalculateOutputKey(keychain.SpendKey(txIn.PreviousOutPoint.Index))
 			coins = append(coins, coin)
 			sumCoins += coin.Value
 
@@ -267,12 +281,22 @@ func (s *Server) Create(ctx context.Context,
 	fee := mweb.EstimateFee(tx.TxOut, ltcutil.Amount(req.FeeRatePerKb), false)
 	if sumOutputs+fee > sumCoins {
 		pegin = sumOutputs + fee - sumCoins
+	} else {
+		fee = sumCoins - sumOutputs
 	}
 
-	tx.Mweb, coins, err =
-		mweb.NewTransaction(coins, recipients, fee, pegin, pegouts)
-	if err != nil {
-		return nil, err
+	if !req.DryRun {
+		tx.Mweb, coins, err =
+			mweb.NewTransaction(coins, recipients, fee, pegin, pegouts)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		tx.Mweb = &wire.MwebTx{
+			TxBody: &wire.MwebTxBody{
+				Kernels: []*wire.MwebKernel{{}},
+			},
+		}
 	}
 
 	tx.TxIn = txIns

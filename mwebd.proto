@@ -56,6 +56,7 @@ message CreateRequest {
     bytes scan_secret = 2;
     bytes spend_secret = 3;
     uint64 fee_rate_per_kb = 4;
+    bool dry_run = 5;
 }
 
 message CreateResponse {
