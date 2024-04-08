@@ -328,5 +328,17 @@ func (s *Server) Broadcast(ctx context.Context,
 	if err := s.CS.SendTransaction(&tx); err != nil {
 		return nil, err
 	}
+
+	if tx.Mweb != nil {
+		var utxos []*wire.MwebNetUtxo
+		for _, output := range tx.Mweb.TxBody.Outputs {
+			utxos = append(utxos, &wire.MwebNetUtxo{
+				Output:   output,
+				OutputId: output.Hash(),
+			})
+		}
+		go s.utxoHandler(nil, utxos)
+	}
+
 	return &BroadcastResponse{Txid: tx.TxHash().String()}, nil
 }
