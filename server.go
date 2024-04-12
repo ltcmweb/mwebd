@@ -228,13 +228,8 @@ func (s *Server) rewindOutput(output *wire.MwebOutput,
 		}
 	}
 	if coin != nil {
-		coin = &mweb.Coin{
-			Blind:        coin.Blind,
-			Value:        coin.Value,
-			OutputId:     coin.OutputId,
-			Address:      coin.Address,
-			SharedSecret: coin.SharedSecret,
-		}
+		c := mweb.Coin(*coin)
+		coin = &c
 	}
 	return
 }
