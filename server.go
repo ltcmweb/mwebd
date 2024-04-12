@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/btcsuite/btclog"
+	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/ltcsuite/ltcd/chaincfg/chainhash"
 	"github.com/ltcsuite/ltcd/ltcutil"
 	"github.com/ltcsuite/ltcd/ltcutil/mweb"
@@ -23,11 +24,12 @@ import (
 
 type Server struct {
 	UnimplementedRpcServer
-	Port     int
-	CS       *neutrino.ChainService
-	Log      btclog.Logger
-	mtx      sync.Mutex
-	utxoChan map[*mw.SecretKey][]chan *Utxo
+	Port      int
+	CS        *neutrino.ChainService
+	Log       btclog.Logger
+	mtx       sync.Mutex
+	utxoChan  map[*mw.SecretKey][]chan *Utxo
+	coinCache *lru.Cache[mw.SecretKey, *lru.Cache[chainhash.Hash, *mweb.Coin]]
 }
 
 func (s *Server) Start() {
@@ -38,6 +40,7 @@ func (s *Server) Start() {
 	}
 
 	s.utxoChan = map[*mw.SecretKey][]chan *Utxo{}
+	s.coinCache, _ = lru.New[mw.SecretKey, *lru.Cache[chainhash.Hash, *mweb.Coin]](10)
 	s.CS.RegisterMwebUtxosCallback(s.utxoHandler)
 
 	server := grpc.NewServer()
@@ -93,7 +96,7 @@ func (s *Server) filterUtxos(scanSecret *mw.SecretKey,
 	utxos []*wire.MwebNetUtxo) (result []*Utxo) {
 
 	for _, utxo := range utxos {
-		coin, err := mweb.RewindOutput(utxo.Output, scanSecret)
+		coin, err := s.rewindOutput(utxo.Output, scanSecret)
 		if err != nil {
 			continue
 		}
@@ -209,6 +212,33 @@ func (s *Server) fetchCoin(outputId chainhash.Hash) (*wire.MwebOutput, error) {
 	return output, err
 }
 
+func (s *Server) rewindOutput(output *wire.MwebOutput,
+	scanSecret *mw.SecretKey) (coin *mweb.Coin, err error) {
+
+	cache, ok := s.coinCache.Get(*scanSecret)
+	if !ok {
+		cache, _ = lru.New[chainhash.Hash, *mweb.Coin](100)
+		s.coinCache.Add(*scanSecret, cache)
+	}
+	coin, ok = cache.Get(*output.Hash())
+	if !ok {
+		coin, err = mweb.RewindOutput(output, scanSecret)
+		if err == nil {
+			cache.Add(*output.Hash(), coin)
+		}
+	}
+	if coin != nil {
+		coin = &mweb.Coin{
+			Blind:        coin.Blind,
+			Value:        coin.Value,
+			OutputId:     coin.OutputId,
+			Address:      coin.Address,
+			SharedSecret: coin.SharedSecret,
+		}
+	}
+	return
+}
+
 func (s *Server) Create(ctx context.Context,
 	req *CreateRequest) (*CreateResponse, error) {
 
@@ -237,7 +267,7 @@ func (s *Server) Create(ctx context.Context,
 		output, err := s.fetchCoin(txIn.PreviousOutPoint.Hash)
 		switch err {
 		case nil:
-			coin, err := mweb.RewindOutput(output, keychain.Scan)
+			coin, err := s.rewindOutput(output, keychain.Scan)
 			if err != nil {
 				return nil, err
 			}
