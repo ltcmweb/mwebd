@@ -28,6 +28,7 @@ type Server struct {
 	CS        *neutrino.ChainService
 	Log       btclog.Logger
 	mtx       sync.Mutex
+	server    *grpc.Server
 	utxoChan  map[*mw.SecretKey][]chan *Utxo
 	coinCache *lru.Cache[mw.SecretKey, *lru.Cache[chainhash.Hash, *mweb.Coin]]
 }
@@ -43,9 +44,13 @@ func (s *Server) Start() {
 	s.coinCache, _ = lru.New[mw.SecretKey, *lru.Cache[chainhash.Hash, *mweb.Coin]](10)
 	s.CS.RegisterMwebUtxosCallback(s.utxoHandler)
 
-	server := grpc.NewServer()
-	RegisterRpcServer(server, s)
-	server.Serve(lis)
+	s.server = grpc.NewServer()
+	RegisterRpcServer(s.server, s)
+	s.server.Serve(lis)
+}
+
+func (s *Server) Stop() {
+	s.server.Stop()
 }
 
 func (s *Server) Status(context.Context, *StatusRequest) (*StatusResponse, error) {
