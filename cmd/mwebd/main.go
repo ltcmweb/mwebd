@@ -19,7 +19,6 @@ var (
 	dataDir = flag.String("d", ".", "Data directory")
 	peer    = flag.String("p", "", "Connect to peer")
 	port    = flag.Int("l", 12345, "Listen port")
-	ppid    = flag.Int("ppid", 0, "Parent pid")
 )
 
 func main() {
@@ -63,15 +62,20 @@ func main() {
 		CS:   chainService,
 		Log:  backend.Logger("RPCS"),
 	}
-
-	if *ppid > 0 {
-		go func() {
-			for os.Getppid() == *ppid {
-				time.Sleep(time.Second)
-			}
-			server.Stop()
-		}()
-	}
-
+	go waitForParent(server)
 	server.Start()
+}
+
+func waitForParent(server *mwebd.Server) {
+	pid := os.Getppid()
+	p, err := os.FindProcess(pid)
+	if err != nil {
+		return
+	}
+	if _, err = p.Wait(); err != nil {
+		for os.Getppid() == pid {
+			time.Sleep(time.Second)
+		}
+	}
+	server.Stop()
 }
