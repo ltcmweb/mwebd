@@ -59,6 +59,7 @@ func main() {
 
 	server := &mwebd.Server{
 		Port: *port,
+		DB:   db,
 		CS:   chainService,
 		Log:  backend.Logger("RPCS"),
 	}

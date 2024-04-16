@@ -17,6 +17,7 @@ import (
 	"github.com/ltcsuite/ltcd/ltcutil/mweb/mw"
 	"github.com/ltcsuite/ltcd/txscript"
 	"github.com/ltcsuite/ltcd/wire"
+	"github.com/ltcsuite/ltcwallet/walletdb"
 	"github.com/ltcsuite/neutrino"
 	"github.com/ltcsuite/neutrino/mwebdb"
 	"google.golang.org/grpc"
@@ -25,6 +26,7 @@ import (
 type Server struct {
 	UnimplementedRpcServer
 	Port      int
+	DB        walletdb.DB
 	CS        *neutrino.ChainService
 	Log       btclog.Logger
 	mtx       sync.Mutex
@@ -84,6 +86,27 @@ func (s *Server) Status(context.Context, *StatusRequest) (*StatusResponse, error
 }
 
 func (s *Server) utxoHandler(lfs *mweb.Leafset, utxos []*wire.MwebNetUtxo) {
+	walletdb.Update(s.DB, func(tx walletdb.ReadWriteTx) error {
+		bucket, err := tx.CreateTopLevelBucket([]byte("mweb-mempool"))
+		if err != nil {
+			return err
+		}
+		for _, utxo := range utxos {
+			if utxo.Height == 0 {
+				var buf bytes.Buffer
+				if err = utxo.Output.Serialize(&buf); err != nil {
+					return err
+				}
+				if err = bucket.Put(utxo.OutputId[:], buf.Bytes()); err != nil {
+					return err
+				}
+			} else if err = bucket.Delete(utxo.OutputId[:]); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
@@ -213,6 +236,24 @@ func (s *Server) fetchCoin(outputId chainhash.Hash) (*wire.MwebOutput, error) {
 	if err == mwebdb.ErrCoinNotFound {
 		slices.Reverse(outputId[:])
 		output, err = s.CS.MwebCoinDB.FetchCoin(&outputId)
+	}
+	if err == mwebdb.ErrCoinNotFound {
+		err = walletdb.View(s.DB, func(tx walletdb.ReadTx) error {
+			bucket := tx.ReadBucket([]byte("mweb-mempool"))
+			if bucket == nil {
+				return err
+			}
+			b := bucket.Get(outputId[:])
+			if b == nil {
+				slices.Reverse(outputId[:])
+				b = bucket.Get(outputId[:])
+			}
+			if b == nil {
+				return err
+			}
+			output = &wire.MwebOutput{}
+			return output.Deserialize(bytes.NewReader(b))
+		})
 	}
 	return output, err
 }
