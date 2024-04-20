@@ -4,7 +4,7 @@
 // - protoc             v5.26.1
 // source: mwebd.proto
 
-package mwebd
+package proto
 
 import (
 	context "context"

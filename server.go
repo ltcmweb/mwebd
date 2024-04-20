@@ -18,20 +18,21 @@ import (
 	"github.com/ltcsuite/ltcd/txscript"
 	"github.com/ltcsuite/ltcd/wire"
 	"github.com/ltcsuite/ltcwallet/walletdb"
+	"github.com/ltcsuite/mwebd/proto"
 	"github.com/ltcsuite/neutrino"
 	"github.com/ltcsuite/neutrino/mwebdb"
 	"google.golang.org/grpc"
 )
 
 type Server struct {
-	UnimplementedRpcServer
+	proto.UnimplementedRpcServer
 	Port      int
 	DB        walletdb.DB
 	CS        *neutrino.ChainService
 	Log       btclog.Logger
 	mtx       sync.Mutex
 	server    *grpc.Server
-	utxoChan  map[*mw.SecretKey][]chan *Utxo
+	utxoChan  map[*mw.SecretKey][]chan *proto.Utxo
 	coinCache *lru.Cache[mw.SecretKey, *lru.Cache[chainhash.Hash, *mweb.Coin]]
 }
 
@@ -42,12 +43,12 @@ func (s *Server) Start() {
 		return
 	}
 
-	s.utxoChan = map[*mw.SecretKey][]chan *Utxo{}
+	s.utxoChan = map[*mw.SecretKey][]chan *proto.Utxo{}
 	s.coinCache, _ = lru.New[mw.SecretKey, *lru.Cache[chainhash.Hash, *mweb.Coin]](10)
 	s.CS.RegisterMwebUtxosCallback(s.utxoHandler)
 
 	s.server = grpc.NewServer()
-	RegisterRpcServer(s.server, s)
+	proto.RegisterRpcServer(s.server, s)
 	s.server.Serve(lis)
 }
 
@@ -55,7 +56,9 @@ func (s *Server) Stop() {
 	s.server.Stop()
 }
 
-func (s *Server) Status(context.Context, *StatusRequest) (*StatusResponse, error) {
+func (s *Server) Status(context.Context,
+	*proto.StatusRequest) (*proto.StatusResponse, error) {
+
 	bs, err := s.CS.BestBlock()
 	if err != nil {
 		return nil, err
@@ -78,7 +81,7 @@ func (s *Server) Status(context.Context, *StatusRequest) (*StatusResponse, error
 		return nil, err
 	}
 
-	return &StatusResponse{
+	return &proto.StatusResponse{
 		BlockHeaderHeight: bs.Height,
 		MwebHeaderHeight:  int32(mhHeight),
 		MwebUtxosHeight:   int32(lfs.Height),
@@ -121,7 +124,7 @@ func (s *Server) utxoHandler(lfs *mweb.Leafset, utxos []*wire.MwebNetUtxo) {
 }
 
 func (s *Server) filterUtxos(scanSecret *mw.SecretKey,
-	utxos []*wire.MwebNetUtxo) (result []*Utxo) {
+	utxos []*wire.MwebNetUtxo) (result []*proto.Utxo) {
 
 	for _, utxo := range utxos {
 		coin, err := s.rewindOutput(utxo.Output, scanSecret)
@@ -130,7 +133,7 @@ func (s *Server) filterUtxos(scanSecret *mw.SecretKey,
 		}
 		chainParams := s.CS.ChainParams()
 		addr := ltcutil.NewAddressMweb(coin.Address, &chainParams)
-		result = append(result, &Utxo{
+		result = append(result, &proto.Utxo{
 			Height:   utxo.Height,
 			Value:    coin.Value,
 			Address:  addr.String(),
@@ -140,11 +143,13 @@ func (s *Server) filterUtxos(scanSecret *mw.SecretKey,
 	return
 }
 
-func (s *Server) Utxos(req *UtxosRequest, stream Rpc_UtxosServer) (err error) {
+func (s *Server) Utxos(req *proto.UtxosRequest,
+	stream proto.Rpc_UtxosServer) (err error) {
+
 	scanSecret := (*mw.SecretKey)(req.ScanSecret)
-	ch, quit := make(chan *Utxo), make(chan *Utxo)
+	ch, quit := make(chan *proto.Utxo), make(chan *proto.Utxo)
 	s.mtx.Lock()
-	s.utxoChan[scanSecret] = []chan *Utxo{ch, quit}
+	s.utxoChan[scanSecret] = []chan *proto.Utxo{ch, quit}
 	s.mtx.Unlock()
 
 	heightMap, err := s.CS.MwebCoinDB.GetLeavesAtHeight()
@@ -200,13 +205,13 @@ done:
 }
 
 func (s *Server) Addresses(ctx context.Context,
-	req *AddressRequest) (*AddressResponse, error) {
+	req *proto.AddressRequest) (*proto.AddressResponse, error) {
 
 	keychain := &mweb.Keychain{
 		Scan:        (*mw.SecretKey)(req.ScanSecret),
 		SpendPubKey: (*mw.PublicKey)(req.SpendPubkey),
 	}
-	resp := &AddressResponse{}
+	resp := &proto.AddressResponse{}
 	for i := req.FromIndex; i < req.ToIndex; i++ {
 		chainParams := s.CS.ChainParams()
 		addr := ltcutil.NewAddressMweb(keychain.Address(i), &chainParams)
@@ -216,9 +221,9 @@ func (s *Server) Addresses(ctx context.Context,
 }
 
 func (s *Server) Spent(ctx context.Context,
-	req *SpentRequest) (*SpentResponse, error) {
+	req *proto.SpentRequest) (*proto.SpentResponse, error) {
 
-	resp := &SpentResponse{}
+	resp := &proto.SpentResponse{}
 	for _, outputIdStr := range req.OutputId {
 		outputId, err := hex.DecodeString(outputIdStr)
 		if err != nil {
@@ -281,7 +286,7 @@ func (s *Server) rewindOutput(output *wire.MwebOutput,
 }
 
 func (s *Server) Create(ctx context.Context,
-	req *CreateRequest) (*CreateResponse, error) {
+	req *proto.CreateRequest) (*proto.CreateResponse, error) {
 
 	var (
 		tx         wire.MsgTx
@@ -346,7 +351,7 @@ func (s *Server) Create(ctx context.Context,
 	}
 
 	if len(coins) == 0 && len(recipients) == 0 {
-		return &CreateResponse{RawTx: req.RawTx}, nil
+		return &proto.CreateResponse{RawTx: req.RawTx}, nil
 	}
 
 	fee := mweb.EstimateFee(tx.TxOut, ltcutil.Amount(req.FeeRatePerKb), false)
@@ -381,7 +386,7 @@ func (s *Server) Create(ctx context.Context,
 		return nil, err
 	}
 
-	resp := &CreateResponse{RawTx: buf.Bytes()}
+	resp := &proto.CreateResponse{RawTx: buf.Bytes()}
 	for _, coin := range coins {
 		resp.OutputId = append(resp.OutputId, hex.EncodeToString(coin.OutputId[:]))
 	}
@@ -390,7 +395,7 @@ func (s *Server) Create(ctx context.Context,
 }
 
 func (s *Server) Broadcast(ctx context.Context,
-	req *BroadcastRequest) (*BroadcastResponse, error) {
+	req *proto.BroadcastRequest) (*proto.BroadcastResponse, error) {
 
 	var tx wire.MsgTx
 	if err := tx.Deserialize(bytes.NewReader(req.RawTx)); err != nil {
@@ -411,5 +416,5 @@ func (s *Server) Broadcast(ctx context.Context,
 		go s.utxoHandler(nil, utxos)
 	}
 
-	return &BroadcastResponse{Txid: tx.TxHash().String()}, nil
+	return &proto.BroadcastResponse{Txid: tx.TxHash().String()}, nil
 }
