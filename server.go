@@ -74,7 +74,7 @@ func NewServer(chain, dataDir, peer string) (s *Server, err error) {
 	return s, s.cs.Start()
 }
 
-func (s *Server) Start(port int) error {
+func (s *Server) Start(port int, fork bool) error {
 	lis, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
 	if err != nil {
 		return err
@@ -82,6 +82,11 @@ func (s *Server) Start(port int) error {
 
 	s.server = grpc.NewServer()
 	proto.RegisterRpcServer(s.server, s)
+
+	if fork {
+		go s.server.Serve(lis)
+		return nil
+	}
 	return s.server.Serve(lis)
 }
 
@@ -177,7 +182,7 @@ func (s *Server) filterUtxos(scanSecret *mw.SecretKey,
 }
 
 func (s *Server) Utxos(req *proto.UtxosRequest,
-	stream proto.Rpc_UtxosServer) (err error) {
+	stream proto.Rpc_UtxosServer) error {
 
 	scanSecret := (*mw.SecretKey)(req.ScanSecret)
 	ch, quit := make(chan *proto.Utxo), make(chan *proto.Utxo)
@@ -229,7 +234,7 @@ done:
 	s.mtx.Lock()
 	delete(s.utxoChan, scanSecret)
 	s.mtx.Unlock()
-	return
+	return nil
 }
 
 func (s *Server) Addresses(ctx context.Context,

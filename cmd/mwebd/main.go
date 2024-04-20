@@ -30,7 +30,7 @@ func main() {
 	}
 
 	go waitForParent(server)
-	if err = server.Start(*port); err != nil {
+	if err = server.Start(*port, false); err != nil {
 		log.Errorf("Failed to listen: %v", err)
 	}
 }
