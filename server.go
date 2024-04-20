@@ -6,11 +6,13 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net"
+	"path/filepath"
 	"slices"
 	"sync"
+	"time"
 
-	"github.com/btcsuite/btclog"
 	lru "github.com/hashicorp/golang-lru/v2"
+	"github.com/ltcsuite/ltcd/chaincfg"
 	"github.com/ltcsuite/ltcd/chaincfg/chainhash"
 	"github.com/ltcsuite/ltcd/ltcutil"
 	"github.com/ltcsuite/ltcd/ltcutil/mweb"
@@ -18,6 +20,7 @@ import (
 	"github.com/ltcsuite/ltcd/txscript"
 	"github.com/ltcsuite/ltcd/wire"
 	"github.com/ltcsuite/ltcwallet/walletdb"
+	_ "github.com/ltcsuite/ltcwallet/walletdb/bdb"
 	"github.com/ltcsuite/mwebd/proto"
 	"github.com/ltcsuite/neutrino"
 	"github.com/ltcsuite/neutrino/mwebdb"
@@ -26,30 +29,60 @@ import (
 
 type Server struct {
 	proto.UnimplementedRpcServer
-	Port      int
-	DB        walletdb.DB
-	CS        *neutrino.ChainService
-	Log       btclog.Logger
+	db        walletdb.DB
+	cs        *neutrino.ChainService
 	mtx       sync.Mutex
 	server    *grpc.Server
 	utxoChan  map[*mw.SecretKey][]chan *proto.Utxo
 	coinCache *lru.Cache[mw.SecretKey, *lru.Cache[chainhash.Hash, *mweb.Coin]]
 }
 
-func (s *Server) Start() {
-	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", s.Port))
+func NewServer(chain, dataDir, peer string) (s *Server, err error) {
+	s = &Server{}
+	s.utxoChan = map[*mw.SecretKey][]chan *proto.Utxo{}
+	s.coinCache, _ = lru.New[mw.SecretKey, *lru.Cache[chainhash.Hash, *mweb.Coin]](10)
+
+	s.db, err = walletdb.Create(
+		"bdb", filepath.Join(dataDir, "neutrino.db"), true, time.Minute)
 	if err != nil {
-		s.Log.Errorf("Failed to listen: %v", err)
 		return
 	}
 
-	s.utxoChan = map[*mw.SecretKey][]chan *proto.Utxo{}
-	s.coinCache, _ = lru.New[mw.SecretKey, *lru.Cache[chainhash.Hash, *mweb.Coin]](10)
-	s.CS.RegisterMwebUtxosCallback(s.utxoHandler)
+	cfg := neutrino.Config{
+		DataDir:     dataDir,
+		Database:    s.db,
+		ChainParams: chaincfg.MainNetParams,
+	}
+
+	switch chain {
+	case "testnet":
+		cfg.ChainParams = chaincfg.TestNet4Params
+	case "regtest":
+		cfg.ChainParams = chaincfg.RegressionNetParams
+	}
+
+	if peer != "" {
+		cfg.AddPeers = []string{peer}
+	}
+
+	s.cs, err = neutrino.NewChainService(cfg)
+	if err != nil {
+		return
+	}
+
+	s.cs.RegisterMwebUtxosCallback(s.utxoHandler)
+	return s, s.cs.Start()
+}
+
+func (s *Server) Start(port int) error {
+	lis, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+	if err != nil {
+		return err
+	}
 
 	s.server = grpc.NewServer()
 	proto.RegisterRpcServer(s.server, s)
-	s.server.Serve(lis)
+	return s.server.Serve(lis)
 }
 
 func (s *Server) Stop() {
@@ -59,12 +92,12 @@ func (s *Server) Stop() {
 func (s *Server) Status(context.Context,
 	*proto.StatusRequest) (*proto.StatusResponse, error) {
 
-	bs, err := s.CS.BestBlock()
+	_, bhHeight, err := s.cs.BlockHeaders.ChainTip()
 	if err != nil {
 		return nil, err
 	}
 
-	heightMap, err := s.CS.MwebCoinDB.GetLeavesAtHeight()
+	heightMap, err := s.cs.MwebCoinDB.GetLeavesAtHeight()
 	if err != nil {
 		return nil, err
 	}
@@ -76,20 +109,20 @@ func (s *Server) Status(context.Context,
 		}
 	}
 
-	lfs, err := s.CS.MwebCoinDB.GetLeafset()
+	lfs, err := s.cs.MwebCoinDB.GetLeafset()
 	if err != nil {
 		return nil, err
 	}
 
 	return &proto.StatusResponse{
-		BlockHeaderHeight: bs.Height,
+		BlockHeaderHeight: int32(bhHeight),
 		MwebHeaderHeight:  int32(mhHeight),
 		MwebUtxosHeight:   int32(lfs.Height),
 	}, nil
 }
 
 func (s *Server) utxoHandler(lfs *mweb.Leafset, utxos []*wire.MwebNetUtxo) {
-	walletdb.Update(s.DB, func(tx walletdb.ReadWriteTx) error {
+	walletdb.Update(s.db, func(tx walletdb.ReadWriteTx) error {
 		bucket, err := tx.CreateTopLevelBucket([]byte("mweb-mempool"))
 		if err != nil {
 			return err
@@ -131,7 +164,7 @@ func (s *Server) filterUtxos(scanSecret *mw.SecretKey,
 		if err != nil {
 			continue
 		}
-		chainParams := s.CS.ChainParams()
+		chainParams := s.cs.ChainParams()
 		addr := ltcutil.NewAddressMweb(coin.Address, &chainParams)
 		result = append(result, &proto.Utxo{
 			Height:   utxo.Height,
@@ -152,7 +185,7 @@ func (s *Server) Utxos(req *proto.UtxosRequest,
 	s.utxoChan[scanSecret] = []chan *proto.Utxo{ch, quit}
 	s.mtx.Unlock()
 
-	heightMap, err := s.CS.MwebCoinDB.GetLeavesAtHeight()
+	heightMap, err := s.cs.MwebCoinDB.GetLeavesAtHeight()
 	if err != nil {
 		return err
 	}
@@ -167,7 +200,7 @@ func (s *Server) Utxos(req *proto.UtxosRequest,
 		leaf = heightMap[heights[index-1]]
 	}
 
-	lfs, err := s.CS.MwebCoinDB.GetLeafset()
+	lfs, err := s.cs.MwebCoinDB.GetLeafset()
 	if err != nil {
 		return err
 	}
@@ -178,22 +211,17 @@ func (s *Server) Utxos(req *proto.UtxosRequest,
 		}
 	}
 
-	utxos, err := s.CS.MwebCoinDB.FetchLeaves(leaves)
+	utxos, err := s.cs.MwebCoinDB.FetchLeaves(leaves)
 	if err != nil {
 		return err
 	}
 	for _, utxo := range s.filterUtxos(scanSecret, utxos) {
-		if err = stream.Send(utxo); err != nil {
-			s.Log.Errorf("Failed to send: %v", err)
+		if stream.Send(utxo) != nil {
 			goto done
 		}
 	}
 
-	for {
-		if err = stream.Send(<-ch); err != nil {
-			s.Log.Errorf("Failed to send: %v", err)
-			break
-		}
+	for stream.Send(<-ch) == nil {
 	}
 
 done:
@@ -213,7 +241,7 @@ func (s *Server) Addresses(ctx context.Context,
 	}
 	resp := &proto.AddressResponse{}
 	for i := req.FromIndex; i < req.ToIndex; i++ {
-		chainParams := s.CS.ChainParams()
+		chainParams := s.cs.ChainParams()
 		addr := ltcutil.NewAddressMweb(keychain.Address(i), &chainParams)
 		resp.Address = append(resp.Address, addr.String())
 	}
@@ -229,7 +257,7 @@ func (s *Server) Spent(ctx context.Context,
 		if err != nil {
 			return nil, err
 		}
-		if !s.CS.MwebUtxoExists((*chainhash.Hash)(outputId)) {
+		if !s.cs.MwebUtxoExists((*chainhash.Hash)(outputId)) {
 			resp.OutputId = append(resp.OutputId, outputIdStr)
 		}
 	}
@@ -237,13 +265,13 @@ func (s *Server) Spent(ctx context.Context,
 }
 
 func (s *Server) fetchCoin(outputId chainhash.Hash) (*wire.MwebOutput, error) {
-	output, err := s.CS.MwebCoinDB.FetchCoin(&outputId)
+	output, err := s.cs.MwebCoinDB.FetchCoin(&outputId)
 	if err == mwebdb.ErrCoinNotFound {
 		slices.Reverse(outputId[:])
-		output, err = s.CS.MwebCoinDB.FetchCoin(&outputId)
+		output, err = s.cs.MwebCoinDB.FetchCoin(&outputId)
 	}
 	if err == mwebdb.ErrCoinNotFound {
-		err = walletdb.View(s.DB, func(tx walletdb.ReadTx) error {
+		err = walletdb.View(s.db, func(tx walletdb.ReadTx) error {
 			bucket := tx.ReadBucket([]byte("mweb-mempool"))
 			if bucket == nil {
 				return err
@@ -337,7 +365,7 @@ func (s *Server) Create(ctx context.Context,
 			continue
 		}
 
-		chainParams := s.CS.ChainParams()
+		chainParams := s.cs.ChainParams()
 		_, addrs, _, err := txscript.ExtractPkScriptAddrs(
 			txOut.PkScript, &chainParams)
 		if err != nil {
@@ -401,7 +429,7 @@ func (s *Server) Broadcast(ctx context.Context,
 	if err := tx.Deserialize(bytes.NewReader(req.RawTx)); err != nil {
 		return nil, err
 	}
-	if err := s.CS.SendTransaction(&tx); err != nil {
+	if err := s.cs.SendTransaction(&tx); err != nil {
 		return nil, err
 	}
 

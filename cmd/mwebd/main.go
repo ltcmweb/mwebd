@@ -3,13 +3,9 @@ package main
 import (
 	"flag"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/btcsuite/btclog"
-	"github.com/ltcsuite/ltcd/chaincfg"
-	"github.com/ltcsuite/ltcwallet/walletdb"
-	_ "github.com/ltcsuite/ltcwallet/walletdb/bdb"
 	"github.com/ltcsuite/mwebd"
 	"github.com/ltcsuite/neutrino"
 )
@@ -27,44 +23,16 @@ func main() {
 	log := backend.Logger("LTCN")
 	neutrino.UseLogger(log)
 
-	db, err := walletdb.Create(
-		"bdb", filepath.Join(*dataDir, "neutrino.db"), true, time.Minute)
+	server, err := mwebd.NewServer(*chain, *dataDir, *peer)
 	if err != nil {
-		log.Errorf("Unable to create Neutrino DB: %v", err)
+		log.Errorf("Unable to start server: %v", err)
 		return
 	}
-	defer db.Close()
 
-	cfg := neutrino.Config{
-		DataDir:     *dataDir,
-		Database:    db,
-		ChainParams: chaincfg.MainNetParams,
-	}
-	switch *chain {
-	case chaincfg.TestNet4Params.Name, "testnet":
-		cfg.ChainParams = chaincfg.TestNet4Params
-	case chaincfg.RegressionNetParams.Name:
-		cfg.ChainParams = chaincfg.RegressionNetParams
-	}
-	if *peer != "" {
-		cfg.AddPeers = []string{*peer}
-	}
-
-	chainService, err := neutrino.NewChainService(cfg)
-	if err != nil {
-		log.Errorf("Couldn't create Neutrino ChainService: %v", err)
-		return
-	}
-	chainService.Start()
-
-	server := &mwebd.Server{
-		Port: *port,
-		DB:   db,
-		CS:   chainService,
-		Log:  backend.Logger("RPCS"),
-	}
 	go waitForParent(server)
-	server.Start()
+	if err = server.Start(*port); err != nil {
+		log.Errorf("Failed to listen: %v", err)
+	}
 }
 
 func waitForParent(server *mwebd.Server) {
