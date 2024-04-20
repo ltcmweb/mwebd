@@ -182,7 +182,7 @@ func (s *Server) filterUtxos(scanSecret *mw.SecretKey,
 }
 
 func (s *Server) Utxos(req *proto.UtxosRequest,
-	stream proto.Rpc_UtxosServer) error {
+	stream proto.Rpc_UtxosServer) (err error) {
 
 	scanSecret := (*mw.SecretKey)(req.ScanSecret)
 	ch, quit := make(chan *proto.Utxo), make(chan *proto.Utxo)
@@ -192,7 +192,7 @@ func (s *Server) Utxos(req *proto.UtxosRequest,
 
 	heightMap, err := s.cs.MwebCoinDB.GetLeavesAtHeight()
 	if err != nil {
-		return err
+		return
 	}
 	var heights []uint32
 	for height := range heightMap {
@@ -207,7 +207,7 @@ func (s *Server) Utxos(req *proto.UtxosRequest,
 
 	lfs, err := s.cs.MwebCoinDB.GetLeafset()
 	if err != nil {
-		return err
+		return
 	}
 	var leaves []uint64
 	for ; leaf < lfs.Size; leaf++ {
@@ -218,23 +218,21 @@ func (s *Server) Utxos(req *proto.UtxosRequest,
 
 	utxos, err := s.cs.MwebCoinDB.FetchLeaves(leaves)
 	if err != nil {
-		return err
+		return
 	}
 	for _, utxo := range s.filterUtxos(scanSecret, utxos) {
-		if stream.Send(utxo) != nil {
-			goto done
+		if err = stream.Send(utxo); err != nil {
+			break
 		}
 	}
-
-	for stream.Send(<-ch) == nil {
+	for ; err == nil; err = stream.Send(<-ch) {
 	}
 
-done:
 	close(quit)
 	s.mtx.Lock()
 	delete(s.utxoChan, scanSecret)
 	s.mtx.Unlock()
-	return nil
+	return
 }
 
 func (s *Server) Addresses(ctx context.Context,
