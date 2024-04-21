@@ -43,7 +43,7 @@ func NewServer(chain, dataDir, peer string) (s *Server, err error) {
 	s.coinCache, _ = lru.New[mw.SecretKey, *lru.Cache[chainhash.Hash, *mweb.Coin]](10)
 
 	s.db, err = walletdb.Create(
-		"bdb", filepath.Join(dataDir, "neutrino.db"), true, time.Minute)
+		"bdb", filepath.Join(dataDir, "neutrino.db"), false, time.Minute)
 	if err != nil {
 		return
 	}
