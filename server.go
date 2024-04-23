@@ -190,6 +190,13 @@ func (s *Server) Utxos(req *proto.UtxosRequest,
 	s.utxoChan[scanSecret] = []chan *proto.Utxo{ch, quit}
 	s.mtx.Unlock()
 
+	defer func() {
+		close(quit)
+		s.mtx.Lock()
+		delete(s.utxoChan, scanSecret)
+		s.mtx.Unlock()
+	}()
+
 	heightMap, err := s.cs.MwebCoinDB.GetLeavesAtHeight()
 	if err != nil {
 		return
@@ -209,29 +216,25 @@ func (s *Server) Utxos(req *proto.UtxosRequest,
 	if err != nil {
 		return
 	}
-	var leaves []uint64
-	for ; leaf < lfs.Size; leaf++ {
+	for leaves := []uint64{}; leaf < lfs.Size; leaf++ {
 		if lfs.Contains(leaf) {
 			leaves = append(leaves, leaf)
 		}
-	}
-
-	utxos, err := s.cs.MwebCoinDB.FetchLeaves(leaves)
-	if err != nil {
-		return
-	}
-	for _, utxo := range s.filterUtxos(scanSecret, utxos) {
-		if err = stream.Send(utxo); err != nil {
-			break
+		if len(leaves) == 1000 || leaf == lfs.Size-1 {
+			utxos, err := s.cs.MwebCoinDB.FetchLeaves(leaves)
+			if err != nil {
+				return err
+			}
+			for _, utxo := range s.filterUtxos(scanSecret, utxos) {
+				if err = stream.Send(utxo); err != nil {
+					return err
+				}
+			}
+			leaves = leaves[:0]
 		}
 	}
 	for ; err == nil; err = stream.Send(<-ch) {
 	}
-
-	close(quit)
-	s.mtx.Lock()
-	delete(s.utxoChan, scanSecret)
-	s.mtx.Unlock()
 	return
 }
 
