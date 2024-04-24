@@ -174,7 +174,7 @@ func (s *Server) filterUtxos(scanSecret *mw.SecretKey,
 		addr := ltcutil.NewAddressMweb(coin.Address, &chainParams)
 		bh, err := s.cs.BlockHeaders.FetchHeaderByHeight(uint32(utxo.Height))
 		if err != nil {
-			bh = &wire.BlockHeader{}
+			bh = &wire.BlockHeader{Timestamp: time.Unix(0, 0)}
 		}
 		result = append(result, &proto.Utxo{
 			Height:    utxo.Height,
