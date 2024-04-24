@@ -97,7 +97,7 @@ func (s *Server) Stop() {
 func (s *Server) Status(context.Context,
 	*proto.StatusRequest) (*proto.StatusResponse, error) {
 
-	_, bhHeight, err := s.cs.BlockHeaders.ChainTip()
+	bh, bhHeight, err := s.cs.BlockHeaders.ChainTip()
 	if err != nil {
 		return nil, err
 	}
@@ -123,6 +123,7 @@ func (s *Server) Status(context.Context,
 		BlockHeaderHeight: int32(bhHeight),
 		MwebHeaderHeight:  int32(mhHeight),
 		MwebUtxosHeight:   int32(lfs.Height),
+		BlockTime:         uint32(bh.Timestamp.Unix()),
 	}, nil
 }
 
@@ -171,11 +172,16 @@ func (s *Server) filterUtxos(scanSecret *mw.SecretKey,
 		}
 		chainParams := s.cs.ChainParams()
 		addr := ltcutil.NewAddressMweb(coin.Address, &chainParams)
+		bh, err := s.cs.BlockHeaders.FetchHeaderByHeight(uint32(utxo.Height))
+		if err != nil {
+			bh = &wire.BlockHeader{}
+		}
 		result = append(result, &proto.Utxo{
-			Height:   utxo.Height,
-			Value:    coin.Value,
-			Address:  addr.String(),
-			OutputId: hex.EncodeToString(utxo.OutputId[:]),
+			Height:    utxo.Height,
+			Value:     coin.Value,
+			Address:   addr.String(),
+			OutputId:  hex.EncodeToString(utxo.OutputId[:]),
+			BlockTime: uint32(bh.Timestamp.Unix()),
 		})
 	}
 	return
@@ -233,6 +239,7 @@ func (s *Server) Utxos(req *proto.UtxosRequest,
 			leaves = leaves[:0]
 		}
 	}
+	err = stream.Send(&proto.Utxo{})
 	for ; err == nil; err = stream.Send(<-ch) {
 	}
 	return

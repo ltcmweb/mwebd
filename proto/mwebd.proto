@@ -18,6 +18,7 @@ message StatusResponse {
     int32 block_header_height = 1;
     int32 mweb_header_height = 2;
     int32 mweb_utxos_height = 3;
+    uint32 block_time = 4;
 }
 
 message UtxosRequest {
@@ -30,6 +31,7 @@ message Utxo {
     uint64 value = 2;
     string address = 3;
     string output_id = 4;
+    uint32 block_time = 5;
 }
 
 message AddressRequest {
