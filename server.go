@@ -84,10 +84,20 @@ func (s *Server) Start(port int) (int, error) {
 	proto.RegisterRpcServer(s.server, s)
 
 	if port == 0 {
-		go s.server.Serve(lis)
+		go s.serve(lis)
 		return lis.Addr().(*net.TCPAddr).Port, nil
 	}
-	return port, s.server.Serve(lis)
+	return port, s.serve(lis)
+}
+
+func (s *Server) serve(lis net.Listener) error {
+	if err := s.server.Serve(lis); err != nil {
+		return err
+	}
+	if err := s.cs.Stop(); err != nil {
+		return err
+	}
+	return s.db.Close()
 }
 
 func (s *Server) Stop() {
