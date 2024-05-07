@@ -7,7 +7,7 @@ It connects directly to peers on the Litecoin network that have the
 `NODE_MWEB_LIGHT_CLIENT` service bit set. It will download block headers, some
 MWEB headers and the MWEB UTXO set which it keeps up-to-date.
 
-## MWEB accounts
+### MWEB accounts
 
 Accounts are defined by a pair of ECDSA private keys, known as the scan and
 spend secret. These are usually derived from a BIP32 root key as the `0'` and
@@ -16,12 +16,16 @@ using `1000` for the purpose code (MWEB), `2` for the coin type (Litecoin), and
 `0` for the account index, then the scan key can be derived as
 `m/1000'/2'/0'/0'` and the spend key as `m/1000'/2'/0'/1'`.
 
-## MWEB addresses
+### MWEB addresses
+
+MWEB addresses are a Bech32-encoding of the serialized scan and spend pubkeys
+for that address. The serialized pubkey pair is also used directly as the script
+pubkey when specifying new MWEB outputs during transaction creation.
 
 The recommended practice is to use address index 0 as the change address and the
 rest of the indices for receiving.
 
-## Mode of operation
+### Mode of operation
 
 The daemon can be run either as a traditional process or as part of an app via
 FFI bindings. In the former case the port to communicate on should be specified
@@ -31,7 +35,7 @@ as a result. The second mode is built with `gomobile`, e.g.
 
     gomobile bind -o mwebd.aar -target=android github.com/ltcsuite/mwebd
 
-## Fee estimation
+### Fee estimation
 
 It is possible during transaction creation to determine the additional fee added
 by the MWEB transaction. Let `tx` be the transaction before transformation by
@@ -46,7 +50,7 @@ to pay for the corresponding input on the HogEx transaction:
 
     if expected_pegin: fee_increase += fee_rate_per_vb * 41
 
-## Basic workflow
+### Basic workflow
 
 The general idea is:
 - Use `Status` to determine when the daemon is synced, by cross-referencing with
