@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "github.com/ltcsuite/mwebd/proto";
+option go_package = "github.com/ltcmweb/mwebd/proto";
 
 service Rpc {
     // Get the sync status of the daemon. The block headers are

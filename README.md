@@ -33,7 +33,7 @@ as an argument to the program. In the latter the port should be set to zero when
 calling the `Start` method on the server, and the actual port will be returned
 as a result. The second mode is built with `gomobile`, e.g.
 
-    gomobile bind -o mwebd.aar -target=android github.com/ltcsuite/mwebd
+    gomobile bind -o mwebd.aar -target=android github.com/ltcmweb/mwebd
 
 ### Fee estimation
 

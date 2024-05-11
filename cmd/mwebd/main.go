@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/btcsuite/btclog"
-	"github.com/ltcsuite/mwebd"
-	"github.com/ltcsuite/neutrino"
+	"github.com/ltcmweb/mwebd"
+	"github.com/ltcmweb/neutrino"
 )
 
 var (
