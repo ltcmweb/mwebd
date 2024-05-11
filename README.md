@@ -31,9 +31,15 @@ The daemon can be run either as a traditional process or as part of an app via
 FFI bindings. In the former case the port to communicate on should be specified
 as an argument to the program. In the latter the port should be set to zero when
 calling the `Start` method on the server, and the actual port will be returned
-as a result. The second mode is built with `gomobile`, e.g.
+as a result.
 
-    gomobile bind -o mwebd.aar -target=android github.com/ltcmweb/mwebd
+The first mode can be built and installed globally with:
+
+    go install github.com/ltcmweb/mwebd/cmd/mwebd@latest
+
+The second mode is built with `gomobile`, e.g.
+
+    gomobile bind -target=android github.com/ltcmweb/mwebd
 
 ### Fee estimation
 
