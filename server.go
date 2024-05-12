@@ -24,7 +24,6 @@ import (
 	"github.com/ltcmweb/neutrino/mwebdb"
 	"github.com/ltcsuite/ltcwallet/walletdb"
 	_ "github.com/ltcsuite/ltcwallet/walletdb/bdb"
-	_ "golang.org/x/mobile/bind"
 	"google.golang.org/grpc"
 )
 
