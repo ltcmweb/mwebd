@@ -5,6 +5,7 @@ go 1.21
 require (
 	github.com/btcsuite/btclog v0.0.0-20170628155309-84c8d2346e9f
 	github.com/hashicorp/golang-lru/v2 v2.0.7
+	github.com/karalabe/hid v1.0.1-0.20240306101548-573246063e52
 	github.com/ltcmweb/ltcd v0.24.3
 	github.com/ltcmweb/ltcd/chaincfg/chainhash v1.0.3
 	github.com/ltcmweb/ltcd/ltcutil v1.2.3

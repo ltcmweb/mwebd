@@ -3,6 +3,7 @@ package mwebd
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"net"
@@ -344,6 +345,7 @@ func (s *Server) Create(ctx context.Context,
 		txIns      []*wire.TxIn
 		pegouts    []*wire.TxOut
 		coins      []*mweb.Coin
+		addrIndex  []uint32
 		recipients []*mweb.Recipient
 		pegin      uint64
 		sumCoins   uint64
@@ -369,8 +371,10 @@ func (s *Server) Create(ctx context.Context,
 				return nil, err
 			}
 
-			coin.CalculateOutputKey(keychain.SpendKey(txIn.PreviousOutPoint.Index))
+			index := txIn.PreviousOutPoint.Index
+			coin.CalculateOutputKey(keychain.SpendKey(index))
 			coins = append(coins, coin)
+			addrIndex = append(addrIndex, index)
 			sumCoins += coin.Value
 
 		case mwebdb.ErrCoinNotFound:
@@ -413,8 +417,9 @@ func (s *Server) Create(ctx context.Context,
 	}
 
 	if !req.DryRun {
-		tx.Mweb, coins, err =
-			mweb.NewTransaction(coins, recipients, fee, pegin, pegouts)
+		tx.Mweb, coins, err = mweb.NewTransaction(
+			coins, recipients, fee, pegin, pegouts,
+			s.sendLedger(coins, addrIndex, fee, pegin, pegouts))
 		if err != nil {
 			return nil, err
 		}
@@ -443,6 +448,95 @@ func (s *Server) Create(ctx context.Context,
 	}
 
 	return resp, nil
+}
+
+func (s *Server) sendLedger(coins []*mweb.Coin, addrIndex []uint32,
+	fee, pegin uint64, pegouts []*wire.TxOut) mweb.CreateInputsAndKernelFunc {
+
+	return func(outputKey *mw.SecretKey, kernelBlind *mw.BlindingFactor) (
+		inputs []*wire.MwebInput, kernel *wire.MwebKernel,
+		stealthOffset *mw.BlindingFactor, err error) {
+
+		const (
+			CLA     = 0xeb
+			INS     = 0x06
+			P2_MORE = 0x80
+		)
+		kernel = mweb.CreateKernel(kernelBlind, nil, &fee, &pegin, pegouts, nil)
+		l, err := newLedger()
+		if err != nil {
+			return
+		}
+		defer l.Close()
+		buf := []byte{CLA, INS, 0, P2_MORE, 0, 3}
+		for _, p := range []uint32{1000, 2, 0} {
+			buf = binary.BigEndian.AppendUint32(buf, p|0x80000000)
+		}
+		buf = binary.LittleEndian.AppendUint32(buf, uint32(len(coins)))
+		buf = append(buf, outputKey[:]...)
+		buf = append(buf, kernelBlind[:]...)
+		buf = append(buf, kernel.Excess.PubKey()[:]...)
+		buf[4] = byte(len(buf) - 5)
+		if _, err = l.send(buf); err != nil {
+			return
+		}
+		for i, coin := range coins {
+			buf = []byte{CLA, INS, 1, 0, 0}
+			buf = append(buf, coin.OutputId[:]...)
+			buf = binary.LittleEndian.AppendUint32(buf, addrIndex[i])
+			buf = append(buf, coin.SharedSecret[:]...)
+			buf = append(buf, coin.SpendKey[:]...)
+			buf[4] = byte(len(buf) - 5)
+			if buf, err = l.send(buf); err != nil {
+				return
+			}
+			input := struct {
+				Features     byte
+				OutputId     chainhash.Hash
+				InputPubKey  mw.PublicKey
+				OutputPubKey mw.PublicKey
+				Signature    mw.Signature
+			}{}
+			err = binary.Read(bytes.NewReader(buf), binary.LittleEndian, &input)
+			if err != nil {
+				return
+			}
+			inputs = append(inputs, &wire.MwebInput{
+				Features:     wire.MwebInputFeatureBit(input.Features),
+				OutputId:     input.OutputId,
+				InputPubKey:  &input.InputPubKey,
+				OutputPubKey: input.OutputPubKey,
+				Signature:    input.Signature,
+			})
+		}
+		msg := kernel.Message()
+		msg[0] |= byte(wire.MwebKernelStealthExcessFeatureBit)
+		for n := 200; len(msg) > n; msg = msg[n:] {
+			buf = []byte{CLA, INS, 1, P2_MORE, byte(n)}
+			buf = append(buf, msg[:n]...)
+			if _, err = l.send(buf); err != nil {
+				return
+			}
+		}
+		buf = []byte{CLA, INS, 1, 0, byte(len(msg))}
+		buf = append(buf, msg...)
+		if buf, err = l.send(buf); err != nil {
+			return
+		}
+		data := struct {
+			StealthOffset   mw.BlindingFactor
+			StealthExcess   mw.PublicKey
+			KernelSignature mw.Signature
+		}{}
+		err = binary.Read(bytes.NewReader(buf), binary.LittleEndian, &data)
+		if err != nil {
+			return
+		}
+		stealthOffset = &data.StealthOffset
+		kernel.StealthExcess = data.StealthExcess
+		kernel.Signature = data.KernelSignature
+		return
+	}
 }
 
 func (s *Server) Broadcast(ctx context.Context,
