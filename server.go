@@ -417,9 +417,12 @@ func (s *Server) Create(ctx context.Context,
 	}
 
 	if !req.DryRun {
+		var fn mweb.CreateInputsAndKernelFunc
+		if bytes.Count(req.SpendSecret, []byte{0}) == len(req.SpendSecret) {
+			fn = s.sendLedger(coins, addrIndex, fee, pegin, pegouts)
+		}
 		tx.Mweb, coins, err = mweb.NewTransaction(
-			coins, recipients, fee, pegin, pegouts,
-			s.sendLedger(coins, addrIndex, fee, pegin, pegouts))
+			coins, recipients, fee, pegin, pegouts, fn)
 		if err != nil {
 			return nil, err
 		}
