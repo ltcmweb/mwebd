@@ -533,6 +533,7 @@ func (s *Server) sendLedger(coins []*mweb.Coin, addrIndex []uint32,
 			return
 		}
 		stealthOffset = &data.StealthOffset
+		kernel.Features |= wire.MwebKernelStealthExcessFeatureBit
 		kernel.StealthExcess = data.StealthExcess
 		kernel.Signature = data.KernelSignature
 		return
