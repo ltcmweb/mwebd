@@ -272,6 +272,44 @@ func (s *Server) Addresses(ctx context.Context,
 	return resp, nil
 }
 
+func (s *Server) LedgerKeys(ctx context.Context,
+	req *proto.LedgerKeysRequest) (*proto.LedgerKeysResponse, error) {
+
+	const (
+		CLA = 0xeb
+		INS = 0x05
+	)
+	l, err := newLedger()
+	if err != nil {
+		return nil, err
+	}
+	defer l.Close()
+	buf := []byte{CLA, INS, 0, 0, 0, byte(len(req.HdPath))}
+	for _, p := range req.HdPath {
+		buf = binary.BigEndian.AppendUint32(buf, p)
+	}
+	if req.ConfirmAddress {
+		buf[2]++
+		buf[5]--
+	}
+	buf[4] = byte(len(buf) - 5)
+	if buf, err = l.send(buf); err != nil {
+		return nil, err
+	}
+	data := struct {
+		Scan  mw.SecretKey
+		Spend mw.PublicKey
+	}{}
+	err = binary.Read(bytes.NewReader(buf), binary.LittleEndian, &data)
+	if err != nil {
+		return nil, err
+	}
+	return &proto.LedgerKeysResponse{
+		ScanSecret:  data.Scan[:],
+		SpendPubkey: data.Spend[:],
+	}, nil
+}
+
 func (s *Server) Spent(ctx context.Context,
 	req *proto.SpentRequest) (*proto.SpentResponse, error) {
 
@@ -419,7 +457,7 @@ func (s *Server) Create(ctx context.Context,
 	if !req.DryRun {
 		var fn mweb.CreateInputsAndKernelFunc
 		if bytes.Count(req.SpendSecret, []byte{0}) == len(req.SpendSecret) {
-			fn = s.sendLedger(coins, addrIndex, fee, pegin, pegouts)
+			fn = s.sendLedger(req.HdPath, coins, addrIndex, fee, pegin, pegouts)
 		}
 		tx.Mweb, coins, err = mweb.NewTransaction(
 			coins, recipients, fee, pegin, pegouts, fn)
@@ -453,8 +491,9 @@ func (s *Server) Create(ctx context.Context,
 	return resp, nil
 }
 
-func (s *Server) sendLedger(coins []*mweb.Coin, addrIndex []uint32,
-	fee, pegin uint64, pegouts []*wire.TxOut) mweb.CreateInputsAndKernelFunc {
+func (s *Server) sendLedger(hdPath []uint32, coins []*mweb.Coin,
+	addrIndex []uint32, fee, pegin uint64, pegouts []*wire.TxOut,
+) mweb.CreateInputsAndKernelFunc {
 
 	return func(outputKey *mw.SecretKey, kernelBlind *mw.BlindingFactor) (
 		inputs []*wire.MwebInput, kernel *wire.MwebKernel,
@@ -471,9 +510,9 @@ func (s *Server) sendLedger(coins []*mweb.Coin, addrIndex []uint32,
 			return
 		}
 		defer l.Close()
-		buf := []byte{CLA, INS, 0, P2_MORE, 0, 3}
-		for _, p := range []uint32{1000, 2, 0} {
-			buf = binary.BigEndian.AppendUint32(buf, p|0x80000000)
+		buf := []byte{CLA, INS, 0, P2_MORE, 0, byte(len(hdPath))}
+		for _, p := range hdPath {
+			buf = binary.BigEndian.AppendUint32(buf, p)
 		}
 		buf = binary.LittleEndian.AppendUint32(buf, uint32(len(coins)))
 		buf = append(buf, outputKey[:]...)
