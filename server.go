@@ -533,7 +533,7 @@ func (s *Server) sendLedger(hdPath []uint32, coins []*mweb.Coin,
 				return
 			}
 			input := struct {
-				Features     byte
+				Features     wire.MwebInputFeatureBit
 				OutputId     chainhash.Hash
 				InputPubKey  mw.PublicKey
 				OutputPubKey mw.PublicKey
@@ -544,7 +544,7 @@ func (s *Server) sendLedger(hdPath []uint32, coins []*mweb.Coin,
 				return
 			}
 			inputs = append(inputs, &wire.MwebInput{
-				Features:     wire.MwebInputFeatureBit(input.Features),
+				Features:     input.Features,
 				OutputId:     input.OutputId,
 				InputPubKey:  &input.InputPubKey,
 				OutputPubKey: input.OutputPubKey,
