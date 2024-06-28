@@ -296,6 +296,9 @@ func (s *Server) LedgerKeys(ctx context.Context,
 	if buf, err = l.send(buf); err != nil {
 		return nil, err
 	}
+	if req.ConfirmAddress {
+		return &proto.LedgerKeysResponse{}, nil
+	}
 	data := struct {
 		Scan  mw.SecretKey
 		Spend mw.PublicKey
