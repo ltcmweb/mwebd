@@ -34,13 +34,13 @@ type Server struct {
 	cs        *neutrino.ChainService
 	mtx       sync.Mutex
 	server    *grpc.Server
-	utxoChan  map[*mw.SecretKey][]chan *proto.Utxo
+	utxoChan  map[mw.SecretKey]map[chan *proto.Utxo]chan struct{}
 	coinCache *lru.Cache[mw.SecretKey, *lru.Cache[chainhash.Hash, *mweb.Coin]]
 }
 
 func NewServer(chain, dataDir, peer string) (s *Server, err error) {
 	s = &Server{}
-	s.utxoChan = map[*mw.SecretKey][]chan *proto.Utxo{}
+	s.utxoChan = map[mw.SecretKey]map[chan *proto.Utxo]chan struct{}{}
 	s.coinCache, _ = lru.New[mw.SecretKey, *lru.Cache[chainhash.Hash, *mweb.Coin]](10)
 
 	s.db, err = walletdb.Create(
@@ -164,10 +164,12 @@ func (s *Server) utxoHandler(lfs *mweb.Leafset, utxos []*wire.MwebNetUtxo) {
 	defer s.mtx.Unlock()
 
 	for scanSecret, ch := range s.utxoChan {
-		for _, utxo := range s.filterUtxos(scanSecret, utxos) {
-			select {
-			case ch[0] <- utxo:
-			case <-ch[1]:
+		for _, utxo := range s.filterUtxos(&scanSecret, utxos) {
+			for ch, quit := range ch {
+				select {
+				case ch <- utxo:
+				case <-quit:
+				}
 			}
 		}
 	}
@@ -202,15 +204,21 @@ func (s *Server) Utxos(req *proto.UtxosRequest,
 	stream proto.Rpc_UtxosServer) (err error) {
 
 	scanSecret := (*mw.SecretKey)(req.ScanSecret)
-	ch, quit := make(chan *proto.Utxo), make(chan *proto.Utxo)
+	ch, quit := make(chan *proto.Utxo), make(chan struct{})
 	s.mtx.Lock()
-	s.utxoChan[scanSecret] = []chan *proto.Utxo{ch, quit}
+	if s.utxoChan[*scanSecret] == nil {
+		s.utxoChan[*scanSecret] = map[chan *proto.Utxo]chan struct{}{}
+	}
+	s.utxoChan[*scanSecret][ch] = quit
 	s.mtx.Unlock()
 
 	defer func() {
 		close(quit)
 		s.mtx.Lock()
-		delete(s.utxoChan, scanSecret)
+		delete(s.utxoChan[*scanSecret], ch)
+		if len(s.utxoChan[*scanSecret]) == 0 {
+			delete(s.utxoChan, *scanSecret)
+		}
 		s.mtx.Unlock()
 	}()
 
