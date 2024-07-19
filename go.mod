@@ -6,9 +6,9 @@ require (
 	github.com/btcsuite/btclog v0.0.0-20170628155309-84c8d2346e9f
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/karalabe/hid v1.0.1-0.20240306101548-573246063e52
-	github.com/ltcmweb/ltcd v0.24.4-0.20240612083038-834903fbbef4
+	github.com/ltcmweb/ltcd v0.24.4-0.20240719112335-b44674e8e4a0
 	github.com/ltcmweb/ltcd/chaincfg/chainhash v1.0.3
-	github.com/ltcmweb/ltcd/ltcutil v1.2.4-0.20240612083038-834903fbbef4
+	github.com/ltcmweb/ltcd/ltcutil v1.2.4-0.20240719112335-b44674e8e4a0
 	github.com/ltcmweb/neutrino v0.17.1
 	github.com/ltcsuite/ltcwallet/walletdb v1.3.5
 	golang.org/x/mobile v0.0.0-20240506190922-a1a533f289d3
