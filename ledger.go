@@ -261,6 +261,7 @@ func ledgerNewTransaction(hdPath []uint32, coins []*mweb.Coin, addrIndex []uint3
 	result := struct {
 		KernelOffset  mw.BlindingFactor
 		StealthOffset mw.BlindingFactor
+		Features      wire.MwebKernelFeatureBit
 		KernelExcess  mw.Commitment
 		StealthExcess mw.PublicKey
 		Signature     mw.Signature
@@ -277,6 +278,7 @@ func ledgerNewTransaction(hdPath []uint32, coins []*mweb.Coin, addrIndex []uint3
 			Inputs:  inputs,
 			Outputs: outputs,
 			Kernels: []*wire.MwebKernel{{
+				Features:      result.Features,
 				Fee:           fee,
 				Pegin:         pegin,
 				Pegouts:       pegouts,
