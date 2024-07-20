@@ -84,7 +84,7 @@ func (l Ledger) Send(payload []byte) (resp []byte, err error) {
 }
 
 const (
-	CLA                     = 0xeb
+	CLA_MWEB                = 0xeb
 	INS_MWEB_GET_PUBLIC_KEY = 0x05
 	INS_MWEB_ADD_INPUT      = 0x07
 	INS_MWEB_ADD_OUTPUT     = 0x08

@@ -8,7 +8,7 @@ import (
 type mwebSignOutputState struct{ index int }
 
 func (st *mwebSignOutputState) request(ctx *TxContext) []byte {
-	buf := []byte{CLA, INS_MWEB_SIGN_OUTPUT, 0, 0, 0}
+	buf := []byte{CLA_MWEB, INS_MWEB_SIGN_OUTPUT, 0, 0, 0}
 	buf = append(buf, ctx.outputs[st.index].RangeProofHash[:]...)
 	return buf
 }

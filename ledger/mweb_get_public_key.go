@@ -8,7 +8,7 @@ import (
 type mwebGetPublicKeyState struct{}
 
 func (mwebGetPublicKeyState) request(ctx *TxContext) []byte {
-	buf := []byte{CLA, INS_MWEB_GET_PUBLIC_KEY, 0, 0, 0, byte(len(ctx.HdPath))}
+	buf := []byte{CLA_MWEB, INS_MWEB_GET_PUBLIC_KEY, 0, 0, 0, byte(len(ctx.HdPath))}
 	for _, p := range ctx.HdPath {
 		buf = binary.BigEndian.AppendUint32(buf, p)
 	}

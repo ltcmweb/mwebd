@@ -20,7 +20,7 @@ func (st *mwebAddOutputState) request(ctx *TxContext) []byte {
 	recipient := ctx.Recipients[st.index]
 	pA, _ := secp.ParsePubKey(recipient.Address.A()[:])
 	pB, _ := secp.ParsePubKey(recipient.Address.B()[:])
-	buf := []byte{CLA, INS_MWEB_ADD_OUTPUT, 0, 0, 0}
+	buf := []byte{CLA_MWEB, INS_MWEB_ADD_OUTPUT, 0, 0, 0}
 	buf = binary.LittleEndian.AppendUint64(buf, recipient.Value)
 	buf = append(buf, pA.SerializeUncompressed()...)
 	buf = append(buf, pB.SerializeUncompressed()...)

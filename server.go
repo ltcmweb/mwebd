@@ -284,16 +284,13 @@ func (s *Server) Addresses(ctx context.Context,
 func (s *Server) LedgerKeys(ctx context.Context,
 	req *proto.LedgerKeysRequest) (*proto.LedgerKeysResponse, error) {
 
-	const (
-		CLA = 0xeb
-		INS = 0x05
-	)
 	l, err := ledger.NewLedger()
 	if err != nil {
 		return nil, err
 	}
 	defer l.Close()
-	buf := []byte{CLA, INS, 0, 0, 0, byte(len(req.HdPath))}
+	buf := []byte{ledger.CLA_MWEB, ledger.INS_MWEB_GET_PUBLIC_KEY,
+		0, 0, 0, byte(len(req.HdPath))}
 	for _, p := range req.HdPath {
 		buf = binary.BigEndian.AppendUint32(buf, p)
 	}

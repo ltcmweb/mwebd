@@ -8,7 +8,7 @@ import (
 type mwebInitKernelState struct{}
 
 func (mwebInitKernelState) request(ctx *TxContext) []byte {
-	buf := []byte{CLA, INS_MWEB_SIGN_KERNEL, 1, 0, 0}
+	buf := []byte{CLA_MWEB, INS_MWEB_SIGN_KERNEL, 1, 0, 0}
 	buf = binary.LittleEndian.AppendUint64(buf, ctx.Fee)
 	buf = binary.LittleEndian.AppendUint64(buf, ctx.Pegin)
 	buf = binary.LittleEndian.AppendUint16(buf, uint16(len(ctx.Pegouts)))

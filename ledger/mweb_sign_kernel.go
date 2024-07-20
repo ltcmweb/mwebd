@@ -11,7 +11,7 @@ import (
 type mwebSignKernelState struct{}
 
 func (mwebSignKernelState) request(ctx *TxContext) []byte {
-	return []byte{CLA, INS_MWEB_SIGN_KERNEL, 0, 0, 0, 0}
+	return []byte{CLA_MWEB, INS_MWEB_SIGN_KERNEL, 0, 0, 0, 0}
 }
 
 func (mwebSignKernelState) process(ctx *TxContext, r io.Reader) (txState, error) {

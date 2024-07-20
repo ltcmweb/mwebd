@@ -9,7 +9,7 @@ type mwebAddPegoutState struct{ index int }
 
 func (st *mwebAddPegoutState) request(ctx *TxContext) []byte {
 	pegout := ctx.Pegouts[st.index]
-	buf := []byte{CLA, INS_MWEB_SIGN_KERNEL, 0, 0, 0}
+	buf := []byte{CLA_MWEB, INS_MWEB_SIGN_KERNEL, 0, 0, 0}
 	buf = binary.LittleEndian.AppendUint64(buf, uint64(pegout.Value))
 	buf = append(buf, byte(len(pegout.PkScript)))
 	buf = append(buf, pegout.PkScript...)

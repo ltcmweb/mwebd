@@ -13,7 +13,7 @@ type mwebAddInputState struct{ index int }
 
 func (st *mwebAddInputState) request(ctx *TxContext) []byte {
 	coin := ctx.Coins[st.index]
-	buf := []byte{CLA, INS_MWEB_ADD_INPUT, 0, 0, 0}
+	buf := []byte{CLA_MWEB, INS_MWEB_ADD_INPUT, 0, 0, 0}
 	buf = append(buf, coin.Blind[:]...)
 	buf = binary.LittleEndian.AppendUint64(buf, coin.Value)
 	buf = append(buf, coin.OutputId[:]...)
