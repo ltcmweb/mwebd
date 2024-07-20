@@ -20,6 +20,7 @@ import (
 	"github.com/ltcmweb/ltcd/ltcutil/mweb/mw"
 	"github.com/ltcmweb/ltcd/txscript"
 	"github.com/ltcmweb/ltcd/wire"
+	"github.com/ltcmweb/mwebd/ledger"
 	"github.com/ltcmweb/mwebd/proto"
 	"github.com/ltcmweb/neutrino"
 	"github.com/ltcmweb/neutrino/mwebdb"
@@ -287,7 +288,7 @@ func (s *Server) LedgerKeys(ctx context.Context,
 		CLA = 0xeb
 		INS = 0x05
 	)
-	l, err := newLedger()
+	l, err := ledger.NewLedger()
 	if err != nil {
 		return nil, err
 	}
@@ -301,7 +302,7 @@ func (s *Server) LedgerKeys(ctx context.Context,
 		buf[5]--
 	}
 	buf[4] = byte(len(buf) - 5)
-	if buf, err = l.send(buf); err != nil {
+	if buf, err = l.Send(buf); err != nil {
 		return nil, err
 	}
 	if req.ConfirmAddress {
@@ -467,8 +468,17 @@ func (s *Server) Create(ctx context.Context,
 
 	if !req.DryRun {
 		if *keychain.Spend == (mw.SecretKey{}) {
-			tx.Mweb, coins, err = ledgerNewTransaction(req.HdPath,
-				coins, addrIndex, recipients, fee, pegin, pegouts)
+			ctx := &ledger.TxContext{
+				HdPath:     req.HdPath,
+				Coins:      coins,
+				AddrIndex:  addrIndex,
+				Recipients: recipients,
+				Fee:        fee,
+				Pegin:      pegin,
+				Pegouts:    pegouts,
+			}
+			err = ctx.Run()
+			tx.Mweb, coins = ctx.Tx, ctx.NewCoins
 		} else {
 			tx.Mweb, coins, err = mweb.NewTransaction(
 				coins, recipients, fee, pegin, pegouts, nil, nil)
