@@ -29,6 +29,9 @@ service Rpc {
     // Create the MWEB portion of a transaction.
     rpc Create(CreateRequest) returns (CreateResponse);
 
+    // Process APDUs from the Ledger.
+    rpc LedgerExchange(LedgerApdu) returns (LedgerApdu);
+
     // Broadcast a transaction to the network. This is provided as
     // existing broadcast services may not support MWEB transactions.
     rpc Broadcast(BroadcastRequest) returns (BroadcastResponse);
@@ -112,6 +115,10 @@ message LedgerKeysRequest {
 message LedgerKeysResponse {
     bytes scan_secret = 1;
     bytes spend_pubkey = 2;
+}
+
+message LedgerApdu {
+    bytes data = 1;
 }
 
 message SpentRequest {

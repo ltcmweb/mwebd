@@ -123,7 +123,9 @@ func (ctx *TxContext) Request() []byte {
 }
 
 func (ctx *TxContext) Process(resp []byte) (err error) {
-	ctx.state, err = ctx.state.process(ctx, bytes.NewReader(resp))
+	if ctx.state != nil {
+		ctx.state, err = ctx.state.process(ctx, bytes.NewReader(resp))
+	}
 	return
 }
 

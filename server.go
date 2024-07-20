@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net"
 	"path/filepath"
@@ -37,6 +38,7 @@ type Server struct {
 	server    *grpc.Server
 	utxoChan  map[mw.SecretKey]map[chan *proto.Utxo]chan struct{}
 	coinCache *lru.Cache[mw.SecretKey, *lru.Cache[chainhash.Hash, *mweb.Coin]]
+	ledgerTx  *ledger.TxContext
 }
 
 func NewServer(chain, dataDir, peer string) (s *Server, err error) {
@@ -465,17 +467,21 @@ func (s *Server) Create(ctx context.Context,
 
 	if !req.DryRun {
 		if *keychain.Spend == (mw.SecretKey{}) {
-			ctx := &ledger.TxContext{
-				HdPath:     req.HdPath,
-				Coins:      coins,
-				AddrIndex:  addrIndex,
-				Recipients: recipients,
-				Fee:        fee,
-				Pegin:      pegin,
-				Pegouts:    pegouts,
+			if s.ledgerTx == nil {
+				s.ledgerTx = &ledger.TxContext{
+					HdPath:     req.HdPath,
+					Coins:      coins,
+					AddrIndex:  addrIndex,
+					Recipients: recipients,
+					Fee:        fee,
+					Pegin:      pegin,
+					Pegouts:    pegouts,
+				}
+				return &proto.CreateResponse{}, nil
 			}
-			err = ctx.Run()
-			tx.Mweb, coins = ctx.Tx, ctx.NewCoins
+			tx.Mweb = s.ledgerTx.Tx
+			coins = s.ledgerTx.NewCoins
+			s.ledgerTx = nil
 		} else {
 			tx.Mweb, coins, err = mweb.NewTransaction(
 				coins, recipients, fee, pegin, pegouts, nil, nil)
@@ -508,6 +514,21 @@ func (s *Server) Create(ctx context.Context,
 	}
 
 	return resp, nil
+}
+
+func (s *Server) LedgerExchange(ctx context.Context,
+	req *proto.LedgerApdu) (*proto.LedgerApdu, error) {
+
+	if s.ledgerTx == nil {
+		return nil, errors.New("nil ledger tx")
+	}
+	if err := s.ledgerTx.Process(req.Data); err != nil {
+		return nil, err
+	}
+	if s.ledgerTx.Tx != nil {
+		return &proto.LedgerApdu{}, nil
+	}
+	return &proto.LedgerApdu{Data: s.ledgerTx.Request()}, nil
 }
 
 func (s *Server) Broadcast(ctx context.Context,
