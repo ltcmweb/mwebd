@@ -101,6 +101,7 @@ type (
 		Fee, Pegin uint64
 		Pegouts    []*wire.TxOut
 
+		state    txState
 		inputs   []*wire.MwebInput
 		outputs  []*wire.MwebOutput
 		NewCoins []*mweb.Coin
@@ -112,6 +113,20 @@ type (
 	}
 )
 
+func (ctx *TxContext) Request() []byte {
+	if ctx.state == nil {
+		ctx.state = &mwebGetPublicKeyState{}
+	}
+	req := ctx.state.request(ctx)
+	req[4] = byte(len(req) - 5)
+	return req
+}
+
+func (ctx *TxContext) Process(resp []byte) (err error) {
+	ctx.state, err = ctx.state.process(ctx, bytes.NewReader(resp))
+	return
+}
+
 func (ctx *TxContext) Run() (err error) {
 	l, err := NewLedger()
 	if err != nil {
@@ -119,17 +134,14 @@ func (ctx *TxContext) Run() (err error) {
 	}
 	defer l.Close()
 
-	for st := txState(&mwebGetPublicKeyState{}); ; {
-		buf := st.request(ctx)
-		buf[4] = byte(len(buf) - 5)
-		if buf, err = l.Send(buf); err != nil {
-			return
+	for ctx.Tx == nil {
+		resp, err := l.Send(ctx.Request())
+		if err != nil {
+			return err
 		}
-		if st, err = st.process(ctx, bytes.NewReader(buf)); err != nil {
-			return
-		}
-		if ctx.Tx != nil {
-			return
+		if err = ctx.Process(resp); err != nil {
+			return err
 		}
 	}
+	return
 }
