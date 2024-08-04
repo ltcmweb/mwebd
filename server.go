@@ -3,7 +3,6 @@ package mwebd
 import (
 	"bytes"
 	"context"
-	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -281,44 +280,6 @@ func (s *Server) Addresses(ctx context.Context,
 		resp.Address = append(resp.Address, addr.String())
 	}
 	return resp, nil
-}
-
-func (s *Server) LedgerKeys(ctx context.Context,
-	req *proto.LedgerKeysRequest) (*proto.LedgerKeysResponse, error) {
-
-	l, err := ledger.NewLedger()
-	if err != nil {
-		return nil, err
-	}
-	defer l.Close()
-	buf := []byte{ledger.CLA_MWEB, ledger.INS_MWEB_GET_PUBLIC_KEY,
-		0, 0, 0, byte(len(req.HdPath))}
-	for _, p := range req.HdPath {
-		buf = binary.BigEndian.AppendUint32(buf, p)
-	}
-	if req.ConfirmAddress {
-		buf[2]++
-		buf[5]--
-	}
-	buf[4] = byte(len(buf) - 5)
-	if buf, err = l.Send(buf); err != nil {
-		return nil, err
-	}
-	if req.ConfirmAddress {
-		return &proto.LedgerKeysResponse{}, nil
-	}
-	data := struct {
-		Scan  mw.SecretKey
-		Spend mw.PublicKey
-	}{}
-	err = binary.Read(bytes.NewReader(buf), binary.LittleEndian, &data)
-	if err != nil {
-		return nil, err
-	}
-	return &proto.LedgerKeysResponse{
-		ScanSecret:  data.Scan[:],
-		SpendPubkey: data.Spend[:],
-	}, nil
 }
 
 func (s *Server) Spent(ctx context.Context,

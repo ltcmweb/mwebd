@@ -15,10 +15,6 @@ service Rpc {
     // Get a batch of MWEB addresses for an account.
     rpc Addresses(AddressRequest) returns (AddressResponse);
 
-    // Get the scan secret and spend pubkey from a Ledger
-    // for a given HD path.
-    rpc LedgerKeys(LedgerKeysRequest) returns (LedgerKeysResponse);
-
     // Check whether MWEB outputs are in the unspent set or not.
     // This is used to determine when outputs have been spent by
     // either this or another wallet using the same seed, and to
@@ -105,16 +101,6 @@ message AddressRequest {
 message AddressResponse {
     // An array of MWEB addresses within the requested range.
     repeated string address = 1;
-}
-
-message LedgerKeysRequest {
-    repeated uint32 hd_path = 1;
-    bool confirm_address = 2;
-}
-
-message LedgerKeysResponse {
-    bytes scan_secret = 1;
-    bytes spend_pubkey = 2;
 }
 
 message LedgerApdu {
