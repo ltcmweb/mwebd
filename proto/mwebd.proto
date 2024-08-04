@@ -146,10 +146,6 @@ message CreateRequest {
     // Whether to skip MWEB transaction creation. This is useful
     // for fee estimation.
     bool dry_run = 5;
-
-    // If spend secret is zero, this is the HD path to use with
-    // the Ledger.
-    repeated uint32 hd_path = 6;
 }
 
 message CreateResponse {

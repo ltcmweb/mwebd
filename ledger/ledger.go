@@ -9,17 +9,15 @@ import (
 )
 
 const (
-	CLA_MWEB                = 0xeb
-	INS_MWEB_GET_PUBLIC_KEY = 0x05
-	INS_MWEB_ADD_INPUT      = 0x07
-	INS_MWEB_ADD_OUTPUT     = 0x08
-	INS_MWEB_SIGN_OUTPUT    = 0x09
-	INS_MWEB_SIGN_KERNEL    = 0x0a
+	CLA_MWEB             = 0xeb
+	INS_MWEB_ADD_INPUT   = 0x07
+	INS_MWEB_ADD_OUTPUT  = 0x08
+	INS_MWEB_SIGN_OUTPUT = 0x09
+	INS_MWEB_SIGN_KERNEL = 0x0a
 )
 
 type (
 	TxContext struct {
-		HdPath     []uint32
 		Coins      []*mweb.Coin
 		AddrIndex  []uint32
 		Recipients []*mweb.Recipient
@@ -40,7 +38,14 @@ type (
 
 func (ctx *TxContext) Request() []byte {
 	if ctx.state == nil {
-		ctx.state = &mwebGetPublicKeyState{}
+		switch {
+		case len(ctx.Coins) > 0:
+			ctx.state = &mwebAddInputState{}
+		case len(ctx.Recipients) > 0:
+			ctx.state = &mwebAddOutputState{}
+		default:
+			ctx.state = &mwebInitKernelState{}
+		}
 	}
 	req := ctx.state.request(ctx)
 	req[4] = byte(len(req) - 5)

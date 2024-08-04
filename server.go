@@ -430,7 +430,6 @@ func (s *Server) Create(ctx context.Context,
 		if *keychain.Spend == (mw.SecretKey{}) {
 			if s.ledgerTx == nil || s.ledgerTx.Tx == nil {
 				s.ledgerTx = &ledger.TxContext{
-					HdPath:     req.HdPath,
 					Coins:      coins,
 					AddrIndex:  addrIndex,
 					Recipients: recipients,
