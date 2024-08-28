@@ -12,6 +12,7 @@ require (
 	github.com/ltcmweb/neutrino v0.17.1
 	github.com/ltcmweb/secp256k1 v0.1.0
 	github.com/ltcsuite/ltcwallet/walletdb v1.3.5
+	golang.org/x/crypto v0.23.0
 	golang.org/x/mobile v0.0.0-20240506190922-a1a533f289d3
 	google.golang.org/grpc v1.63.2
 	google.golang.org/protobuf v1.34.1
@@ -32,7 +33,6 @@ require (
 	github.com/ltcsuite/lnd/queue v1.1.0 // indirect
 	github.com/ltcsuite/lnd/ticker v1.1.0 // indirect
 	go.etcd.io/bbolt v1.3.10 // indirect
-	golang.org/x/crypto v0.23.0 // indirect
 	golang.org/x/mod v0.17.0 // indirect
 	golang.org/x/net v0.25.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
