@@ -31,6 +31,9 @@ service Rpc {
     // Broadcast a transaction to the network. This is provided as
     // existing broadcast services may not support MWEB transactions.
     rpc Broadcast(BroadcastRequest) returns (BroadcastResponse);
+
+    // Submit a coinswap request.
+    rpc Coinswap(CoinswapRequest) returns (CoinswapResponse);
 }
 
 message StatusRequest {
@@ -168,4 +171,23 @@ message BroadcastRequest {
 message BroadcastResponse {
     // The transaction ID.
     string txid = 1;
+}
+
+message CoinswapRequest {
+    // The scan secret or view key represents the account that
+    // the utxo belongs to.
+    bytes scan_secret = 1;
+
+    // The spend secret is the private key necessary for spending
+    // the utxos belonging to the account.
+    bytes spend_secret = 2;
+
+    // Output ID of the utxo to request a coinswap for.
+    string output_id = 3;
+
+    // Address index of the utxo.
+    uint32 addr_index = 4;
+}
+
+message CoinswapResponse {
 }

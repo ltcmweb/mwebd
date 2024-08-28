@@ -26,6 +26,7 @@ const (
 	Rpc_Create_FullMethodName         = "/Rpc/Create"
 	Rpc_LedgerExchange_FullMethodName = "/Rpc/LedgerExchange"
 	Rpc_Broadcast_FullMethodName      = "/Rpc/Broadcast"
+	Rpc_Coinswap_FullMethodName       = "/Rpc/Coinswap"
 )
 
 // RpcClient is the client API for Rpc service.
@@ -54,6 +55,8 @@ type RpcClient interface {
 	// Broadcast a transaction to the network. This is provided as
 	// existing broadcast services may not support MWEB transactions.
 	Broadcast(ctx context.Context, in *BroadcastRequest, opts ...grpc.CallOption) (*BroadcastResponse, error)
+	// Submit a coinswap request.
+	Coinswap(ctx context.Context, in *CoinswapRequest, opts ...grpc.CallOption) (*CoinswapResponse, error)
 }
 
 type rpcClient struct {
@@ -157,6 +160,16 @@ func (c *rpcClient) Broadcast(ctx context.Context, in *BroadcastRequest, opts ..
 	return out, nil
 }
 
+func (c *rpcClient) Coinswap(ctx context.Context, in *CoinswapRequest, opts ...grpc.CallOption) (*CoinswapResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CoinswapResponse)
+	err := c.cc.Invoke(ctx, Rpc_Coinswap_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // RpcServer is the server API for Rpc service.
 // All implementations must embed UnimplementedRpcServer
 // for forward compatibility
@@ -183,6 +196,8 @@ type RpcServer interface {
 	// Broadcast a transaction to the network. This is provided as
 	// existing broadcast services may not support MWEB transactions.
 	Broadcast(context.Context, *BroadcastRequest) (*BroadcastResponse, error)
+	// Submit a coinswap request.
+	Coinswap(context.Context, *CoinswapRequest) (*CoinswapResponse, error)
 	mustEmbedUnimplementedRpcServer()
 }
 
@@ -210,6 +225,9 @@ func (UnimplementedRpcServer) LedgerExchange(context.Context, *LedgerApdu) (*Led
 }
 func (UnimplementedRpcServer) Broadcast(context.Context, *BroadcastRequest) (*BroadcastResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Broadcast not implemented")
+}
+func (UnimplementedRpcServer) Coinswap(context.Context, *CoinswapRequest) (*CoinswapResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Coinswap not implemented")
 }
 func (UnimplementedRpcServer) mustEmbedUnimplementedRpcServer() {}
 
@@ -353,6 +371,24 @@ func _Rpc_Broadcast_Handler(srv interface{}, ctx context.Context, dec func(inter
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Rpc_Coinswap_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CoinswapRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RpcServer).Coinswap(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Rpc_Coinswap_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RpcServer).Coinswap(ctx, req.(*CoinswapRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Rpc_ServiceDesc is the grpc.ServiceDesc for Rpc service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -383,6 +419,10 @@ var Rpc_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Broadcast",
 			Handler:    _Rpc_Broadcast_Handler,
+		},
+		{
+			MethodName: "Coinswap",
+			Handler:    _Rpc_Coinswap_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
