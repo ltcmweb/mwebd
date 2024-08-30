@@ -10,7 +10,6 @@ require (
 	github.com/ltcmweb/ltcd/chaincfg/chainhash v1.0.3
 	github.com/ltcmweb/ltcd/ltcutil v1.2.4-0.20240719112335-b44674e8e4a0
 	github.com/ltcmweb/neutrino v0.17.1
-	github.com/ltcmweb/secp256k1 v0.1.0
 	github.com/ltcsuite/ltcwallet/walletdb v1.3.5
 	golang.org/x/crypto v0.23.0
 	golang.org/x/mobile v0.0.0-20240506190922-a1a533f289d3
@@ -30,6 +29,7 @@ require (
 	github.com/klauspost/cpuid/v2 v2.2.7 // indirect
 	github.com/ltcmweb/ltcd/btcec/v2 v2.3.3 // indirect
 	github.com/ltcmweb/neutrino/cache v1.1.0 // indirect
+	github.com/ltcmweb/secp256k1 v0.1.0 // indirect
 	github.com/ltcsuite/lnd/queue v1.1.0 // indirect
 	github.com/ltcsuite/lnd/ticker v1.1.0 // indirect
 	go.etcd.io/bbolt v1.3.10 // indirect

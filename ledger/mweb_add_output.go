@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"io"
 
-	secp "github.com/decred/dcrd/dcrec/secp256k1/v4"
+	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 	"github.com/ltcmweb/ltcd/ltcutil/mweb"
 	"github.com/ltcmweb/ltcd/ltcutil/mweb/mw"
 	"github.com/ltcmweb/ltcd/wire"
@@ -14,8 +14,8 @@ type mwebAddOutputState struct{ index int }
 
 func (st *mwebAddOutputState) request(ctx *TxContext) []byte {
 	recipient := ctx.Recipients[st.index]
-	pA, _ := secp.ParsePubKey(recipient.Address.A()[:])
-	pB, _ := secp.ParsePubKey(recipient.Address.B()[:])
+	pA, _ := secp256k1.ParsePubKey(recipient.Address.A()[:])
+	pB, _ := secp256k1.ParsePubKey(recipient.Address.B()[:])
 	buf := []byte{CLA_MWEB, INS_MWEB_ADD_OUTPUT, 0, 0, 0}
 	buf = binary.LittleEndian.AppendUint64(buf, recipient.Value)
 	buf = append(buf, pA.SerializeUncompressed()...)
