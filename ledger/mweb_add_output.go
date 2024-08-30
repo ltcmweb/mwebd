@@ -1,7 +1,6 @@
 package ledger
 
 import (
-	"bytes"
 	"encoding/binary"
 	"io"
 
@@ -9,8 +8,6 @@ import (
 	"github.com/ltcmweb/ltcd/ltcutil/mweb"
 	"github.com/ltcmweb/ltcd/ltcutil/mweb/mw"
 	"github.com/ltcmweb/ltcd/wire"
-	"github.com/ltcmweb/secp256k1"
-	"lukechampine.com/blake3"
 )
 
 type mwebAddOutputState struct{ index int }
@@ -37,30 +34,24 @@ func (st *mwebAddOutputState) process(ctx *TxContext, r io.Reader) (txState, err
 			Blind  mw.BlindingFactor
 			Shared mw.SecretKey
 		}
-		message wire.MwebOutputMessage
-		msg     bytes.Buffer
 	)
 	if err := binary.Read(r, binary.LittleEndian, &result); err != nil {
 		return nil, err
 	}
-	if err := message.Deserialize(io.TeeReader(r, &msg)); err != nil {
+	output := &wire.MwebOutput{
+		Commitment:     result.Commitment,
+		SenderPubKey:   result.SenderPubKey,
+		ReceiverPubKey: result.ReceiverPubKey,
+	}
+	if err := output.Message.Deserialize(r); err != nil {
 		return nil, err
 	}
 	if err := binary.Read(r, binary.LittleEndian, &result2); err != nil {
 		return nil, err
 	}
 	recipient := ctx.Recipients[st.index]
-	rangeProof := secp256k1.NewRangeProof(recipient.Value,
-		*mw.BlindSwitch(&result2.Blind, recipient.Value),
-		make([]byte, 20), msg.Bytes())
-	ctx.outputs = append(ctx.outputs, &wire.MwebOutput{
-		Commitment:     result.Commitment,
-		SenderPubKey:   result.SenderPubKey,
-		ReceiverPubKey: result.ReceiverPubKey,
-		Message:        message,
-		RangeProof:     &rangeProof,
-		RangeProofHash: blake3.Sum256(rangeProof[:]),
-	})
+	mweb.SignOutput(output, recipient.Value, &result2.Blind, &mw.SecretKey{})
+	ctx.outputs = append(ctx.outputs, output)
 	ctx.NewCoins = append(ctx.NewCoins, &mweb.Coin{
 		Blind:        &result2.Blind,
 		Value:        recipient.Value,
