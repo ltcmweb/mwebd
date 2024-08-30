@@ -83,6 +83,7 @@ func TestOnion(t *testing.T) {
 		payloads      [][]byte
 		size          uint64
 	)
+
 	r := bytes.NewReader(onion.Payloads)
 	if err = binary.Read(r, binary.BigEndian, &size); err != nil {
 		t.Fatal(err)
@@ -111,6 +112,7 @@ func TestOnion(t *testing.T) {
 		for j := i; j < 5; j++ {
 			cipher.XORKeyStream(payloads[j], payloads[j])
 		}
+
 		r := bytes.NewReader(payloads[i])
 		ver, err := r.ReadByte()
 		if err != nil {
@@ -122,22 +124,26 @@ func TestOnion(t *testing.T) {
 		if _, err = r.Read(onion.PubKey); err != nil {
 			t.Fatal(err)
 		}
-		var kernelBlind, stealthBlind [32]byte
+
+		var kernelBlind mw.BlindingFactor
 		if _, err = r.Read(kernelBlind[:]); err != nil {
 			t.Fatal(err)
 		}
+		if kernelBlind != *hops[i].kernelBlind {
+			t.Fatal("kernel blind mismatch")
+		}
+		excess := mw.NewCommitment(&kernelBlind, 0)
+		inputCommit = inputCommit.Add(excess.PubKey())
+
+		var stealthBlind mw.SecretKey
 		if _, err = r.Read(stealthBlind[:]); err != nil {
 			t.Fatal(err)
 		}
-		if !bytes.Equal(kernelBlind[:], hops[i].kernelBlind[:]) {
-			t.Fatal("kernel blind mismatch")
-		}
-		if !bytes.Equal(stealthBlind[:], hops[i].stealthBlind[:]) {
+		if mw.BlindingFactor(stealthBlind) != *hops[i].stealthBlind {
 			t.Fatal("stealth blind mismatch")
 		}
-		excess := mw.NewCommitment((*mw.BlindingFactor)(kernelBlind[:]), 0)
-		inputCommit = inputCommit.Add(excess.PubKey())
-		outputStealth = outputStealth.Add((*mw.SecretKey)(stealthBlind[:]).PubKey())
+		outputStealth = outputStealth.Add(stealthBlind.PubKey())
+
 		var fee uint64
 		if err = binary.Read(r, binary.BigEndian, &fee); err != nil {
 			t.Fatal(err)
@@ -147,6 +153,7 @@ func TestOnion(t *testing.T) {
 		}
 		excess = mw.NewCommitment(&mw.BlindingFactor{}, fee)
 		outputCommit = outputCommit.Add(excess.PubKey())
+
 		hasOutput, err := r.ReadByte()
 		if err != nil {
 			t.Fatal(err)

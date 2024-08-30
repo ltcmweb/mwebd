@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"errors"
 
+	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ltcmweb/ltcd/chaincfg/chainhash"
 	"github.com/ltcmweb/ltcd/ltcutil/mweb"
 	"github.com/ltcmweb/ltcd/ltcutil/mweb/mw"
@@ -35,7 +36,7 @@ type (
 			OutputPubKey hexBytes `json:"output_pk"`
 			InputPubKey  hexBytes `json:"input_pk"`
 			Signature    hexBytes `json:"input_sig"`
-		}
+		} `json:"input"`
 		Payloads   hexBytes `json:"enc_payloads"`
 		PubKey     hexBytes `json:"ephemeral_xpub"`
 		OwnerProof hexBytes `json:"owner_proof"`
@@ -50,6 +51,7 @@ func (h hexBytes) MarshalJSON() ([]byte, error) {
 func (s *Server) Coinswap(ctx context.Context,
 	req *proto.CoinswapRequest) (*proto.CoinswapResponse, error) {
 
+	serverUrl := "https://127.0.0.1"
 	serverPubKeys := [][]byte{}
 
 	keychain := &mweb.Keychain{
@@ -57,12 +59,12 @@ func (s *Server) Coinswap(ctx context.Context,
 		Spend: (*mw.SecretKey)(req.SpendSecret),
 	}
 
-	b, err := hex.DecodeString(req.OutputId)
+	outputId, err := hex.DecodeString(req.OutputId)
 	if err != nil {
 		return nil, err
 	}
 
-	output, err := s.fetchCoin(chainhash.Hash(b))
+	output, err := s.fetchCoin(chainhash.Hash(outputId))
 	if err != nil {
 		return nil, err
 	}
@@ -79,12 +81,10 @@ func (s *Server) Coinswap(ctx context.Context,
 		if err != nil {
 			return nil, err
 		}
-		hops = append(hops, &coinswapHop{
-			pubKey: pubKey,
-			fee:    mweb.KernelWithStealthWeight * mweb.BaseMwebFee,
-		})
+		fee := mweb.KernelWithStealthWeight * mweb.BaseMwebFee
+		fee += (mweb.StandardOutputWeight*mweb.BaseMwebFee)/len(serverPubKeys) + 1
+		hops = append(hops, &coinswapHop{pubKey: pubKey, fee: uint64(fee)})
 	}
-	hops[len(hops)-1].fee += mweb.StandardOutputWeight * mweb.BaseMwebFee
 
 	var fee uint64
 	for _, hop := range hops {
@@ -117,6 +117,14 @@ func (s *Server) Coinswap(ctx context.Context,
 	}
 
 	signCoinswapOnion(onion, input, coin.SpendKey)
+
+	client, err := rpc.DialContext(ctx, serverUrl)
+	if err != nil {
+		return nil, err
+	}
+	if err = client.CallContext(ctx, nil, "swap", onion); err != nil {
+		return nil, err
+	}
 
 	return &proto.CoinswapResponse{}, nil
 }
