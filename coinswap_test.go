@@ -6,10 +6,10 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/ltcmweb/coinswapd/onion"
 	"github.com/ltcmweb/ltcd/chaincfg/chainhash"
 	"github.com/ltcmweb/ltcd/ltcutil/mweb"
 	"github.com/ltcmweb/ltcd/ltcutil/mweb/mw"
-	"github.com/ltcmweb/mwebd/onion"
 )
 
 func TestOnion(t *testing.T) {

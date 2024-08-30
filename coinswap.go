@@ -8,18 +8,18 @@ import (
 	"errors"
 
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/ltcmweb/coinswapd/onion"
 	"github.com/ltcmweb/ltcd/chaincfg/chainhash"
 	"github.com/ltcmweb/ltcd/ltcutil/mweb"
 	"github.com/ltcmweb/ltcd/ltcutil/mweb/mw"
 	"github.com/ltcmweb/ltcd/wire"
-	"github.com/ltcmweb/mwebd/onion"
 	"github.com/ltcmweb/mwebd/proto"
 )
 
 func (s *Server) Coinswap(ctx context.Context,
 	req *proto.CoinswapRequest) (*proto.CoinswapResponse, error) {
 
-	serverUrl := "https://127.0.0.1"
+	serverUrl := "http://127.0.0.1:8080"
 	serverPubKeys := [][]byte{}
 
 	keychain := &mweb.Keychain{

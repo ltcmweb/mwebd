@@ -7,16 +7,15 @@ require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0
 	github.com/ethereum/go-ethereum v1.14.8
 	github.com/hashicorp/golang-lru/v2 v2.0.7
+	github.com/ltcmweb/coinswapd v0.0.0-20240830200526-8a1fe7f20446
 	github.com/ltcmweb/ltcd v0.24.4-0.20240719112335-b44674e8e4a0
 	github.com/ltcmweb/ltcd/chaincfg/chainhash v1.0.3
 	github.com/ltcmweb/ltcd/ltcutil v1.2.4-0.20240719112335-b44674e8e4a0
 	github.com/ltcmweb/neutrino v0.17.1
 	github.com/ltcsuite/ltcwallet/walletdb v1.3.5
-	golang.org/x/crypto v0.23.0
 	golang.org/x/mobile v0.0.0-20240506190922-a1a533f289d3
 	google.golang.org/grpc v1.63.2
 	google.golang.org/protobuf v1.34.2
-	lukechampine.com/blake3 v1.3.0
 )
 
 require (
@@ -43,6 +42,7 @@ require (
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	go.etcd.io/bbolt v1.3.10 // indirect
+	golang.org/x/crypto v0.23.0 // indirect
 	golang.org/x/exp v0.0.0-20231110203233-9a3e6036ecaa // indirect
 	golang.org/x/mod v0.17.0 // indirect
 	golang.org/x/net v0.25.0 // indirect
@@ -51,4 +51,5 @@ require (
 	golang.org/x/text v0.15.0 // indirect
 	golang.org/x/tools v0.21.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240509183442-62759503f434 // indirect
+	lukechampine.com/blake3 v1.3.0 // indirect
 )
