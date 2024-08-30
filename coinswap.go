@@ -1,15 +1,10 @@
 package mwebd
 
 import (
-	"bytes"
 	"context"
 	"crypto/ecdh"
-	"crypto/hmac"
 	"crypto/rand"
-	"crypto/sha256"
-	"encoding/binary"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 
 	"github.com/ethereum/go-ethereum/rpc"
@@ -17,36 +12,9 @@ import (
 	"github.com/ltcmweb/ltcd/ltcutil/mweb"
 	"github.com/ltcmweb/ltcd/ltcutil/mweb/mw"
 	"github.com/ltcmweb/ltcd/wire"
+	"github.com/ltcmweb/mwebd/onion"
 	"github.com/ltcmweb/mwebd/proto"
-	"golang.org/x/crypto/chacha20"
-	"lukechampine.com/blake3"
 )
-
-type (
-	coinswapHop struct {
-		pubKey       *ecdh.PublicKey
-		kernelBlind  *mw.BlindingFactor
-		stealthBlind *mw.BlindingFactor
-		fee          uint64
-	}
-	coinswapOnion struct {
-		Input struct {
-			OutputId     hexBytes `json:"output_id"`
-			Commitment   hexBytes `json:"output_commit"`
-			OutputPubKey hexBytes `json:"output_pk"`
-			InputPubKey  hexBytes `json:"input_pk"`
-			Signature    hexBytes `json:"input_sig"`
-		} `json:"input"`
-		Payloads   hexBytes `json:"enc_payloads"`
-		PubKey     hexBytes `json:"ephemeral_xpub"`
-		OwnerProof hexBytes `json:"owner_proof"`
-	}
-	hexBytes []byte
-)
-
-func (h hexBytes) MarshalJSON() ([]byte, error) {
-	return json.Marshal(hex.EncodeToString(h))
-}
 
 func (s *Server) Coinswap(ctx context.Context,
 	req *proto.CoinswapRequest) (*proto.CoinswapResponse, error) {
@@ -75,7 +43,7 @@ func (s *Server) Coinswap(ctx context.Context,
 	}
 	coin.CalculateOutputKey(keychain.SpendKey(req.AddrIndex))
 
-	var hops []*coinswapHop
+	var hops []*onion.Hop
 	for _, pk := range serverPubKeys {
 		pubKey, err := ecdh.X25519().NewPublicKey(pk)
 		if err != nil {
@@ -83,12 +51,12 @@ func (s *Server) Coinswap(ctx context.Context,
 		}
 		fee := mweb.KernelWithStealthWeight * mweb.BaseMwebFee
 		fee += (mweb.StandardOutputWeight*mweb.BaseMwebFee)/len(serverPubKeys) + 1
-		hops = append(hops, &coinswapHop{pubKey: pubKey, fee: uint64(fee)})
+		hops = append(hops, &onion.Hop{PubKey: pubKey, Fee: uint64(fee)})
 	}
 
 	var fee uint64
 	for _, hop := range hops {
-		fee += hop.fee
+		fee += hop.Fee
 	}
 	if coin.Value < fee {
 		return nil, errors.New("insufficient value for fee")
@@ -105,18 +73,19 @@ func (s *Server) Coinswap(ctx context.Context,
 	}
 
 	for i, blind := range splitBlind(kernelBlind, len(hops)) {
-		hops[i].kernelBlind = blind
+		hops[i].KernelBlind = *blind
 	}
 	for i, blind := range splitBlind(stealthBlind, len(hops)) {
-		hops[i].stealthBlind = blind
+		hops[i].StealthBlind = *blind
 	}
 
-	onion, err := makeCoinswapOnion(hops, output)
+	hops[len(hops)-1].Output = output
+
+	onion, err := onion.New(hops)
 	if err != nil {
 		return nil, err
 	}
-
-	signCoinswapOnion(onion, input, coin.SpendKey)
+	onion.Sign(input, coin.SpendKey)
 
 	client, err := rpc.DialContext(ctx, serverUrl)
 	if err != nil {
@@ -170,97 +139,4 @@ func splitBlind(blind *mw.BlindingFactor, n int) (blinds []*mw.BlindingFactor) {
 	}
 	blinds = append(blinds, blind)
 	return
-}
-
-func makeCoinswapOnion(hops []*coinswapHop,
-	output *wire.MwebOutput) (*coinswapOnion, error) {
-
-	privKey, err := ecdh.X25519().GenerateKey(rand.Reader)
-	if err != nil {
-		return nil, err
-	}
-	onion := &coinswapOnion{PubKey: privKey.PublicKey().Bytes()}
-
-	var secrets, payloads [][]byte
-	for i, hop := range hops {
-		secret, err := privKey.ECDH(hop.pubKey)
-		if err != nil {
-			return nil, err
-		}
-		secrets = append(secrets, secret)
-
-		privKey, err = ecdh.X25519().GenerateKey(rand.Reader)
-		if err != nil {
-			return nil, err
-		}
-
-		var buf bytes.Buffer
-		buf.WriteByte(0)
-		if i < len(hops)-1 {
-			buf.Write(privKey.PublicKey().Bytes())
-		} else {
-			buf.Write(make([]byte, 32))
-		}
-
-		buf.Write(hop.kernelBlind[:])
-		buf.Write(hop.stealthBlind[:])
-		binary.Write(&buf, binary.BigEndian, hop.fee)
-
-		if i == len(hops)-1 {
-			buf.WriteByte(1)
-			output.Serialize(&buf)
-		} else {
-			buf.WriteByte(0)
-		}
-
-		payloads = append(payloads, buf.Bytes())
-	}
-
-	for i := len(payloads) - 1; i >= 0; i-- {
-		cipher := newOnionCipher(secrets[i])
-		for j := i; j < len(payloads); j++ {
-			cipher.XORKeyStream(payloads[j], payloads[j])
-		}
-	}
-
-	var buf bytes.Buffer
-	binary.Write(&buf, binary.BigEndian, uint64(len(payloads)))
-	for _, payload := range payloads {
-		binary.Write(&buf, binary.BigEndian, uint64(len(payload)))
-		buf.Write(payload)
-	}
-	onion.Payloads = buf.Bytes()
-	return onion, nil
-}
-
-func newOnionCipher(secret []byte) *chacha20.Cipher {
-	h := hmac.New(sha256.New, []byte("MWIXNET"))
-	h.Write(secret)
-	cipher, _ := chacha20.NewUnauthenticatedCipher(h.Sum(nil), []byte("NONCE1234567"))
-	return cipher
-}
-
-func signCoinswapOnion(onion *coinswapOnion,
-	input *wire.MwebInput, spendKey *mw.SecretKey) {
-
-	onion.Input.OutputId = input.OutputId[:]
-	onion.Input.Commitment = input.Commitment[:]
-	onion.Input.OutputPubKey = input.OutputPubKey[:]
-	onion.Input.InputPubKey = input.InputPubKey[:]
-	onion.Input.Signature = input.Signature[:]
-
-	var msg bytes.Buffer
-	msg.Write(onion.Input.OutputId)
-	msg.Write(onion.Input.Commitment)
-	msg.Write(onion.Input.OutputPubKey)
-	msg.Write(onion.Input.InputPubKey)
-	msg.Write(onion.Input.Signature)
-	msg.Write(onion.Payloads)
-	msg.Write(onion.PubKey)
-
-	h := blake3.New(32, nil)
-	h.Write(input.InputPubKey[:])
-	h.Write(input.OutputPubKey[:])
-	sig := mw.Sign(spendKey.Mul((*mw.SecretKey)(h.Sum(nil))), msg.Bytes())
-	onion.OwnerProof = sig[:]
 }

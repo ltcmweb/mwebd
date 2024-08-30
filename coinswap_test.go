@@ -1,17 +1,15 @@
 package mwebd
 
 import (
-	"bytes"
 	"crypto/ecdh"
 	"crypto/rand"
-	"encoding/binary"
 	"reflect"
 	"testing"
 
 	"github.com/ltcmweb/ltcd/chaincfg/chainhash"
 	"github.com/ltcmweb/ltcd/ltcutil/mweb"
 	"github.com/ltcmweb/ltcd/ltcutil/mweb/mw"
-	"github.com/ltcmweb/ltcd/wire"
+	"github.com/ltcmweb/mwebd/onion"
 )
 
 func TestOnion(t *testing.T) {
@@ -53,129 +51,71 @@ func TestOnion(t *testing.T) {
 	kernelBlinds := splitBlind(kernelBlind, 5)
 	stealthBlinds := splitBlind(stealthBlind, 5)
 
-	var hops []*coinswapHop
+	var hops []*onion.Hop
 	for i := 0; i < 5; i++ {
 		privKey, err := ecdh.X25519().GenerateKey(rand.Reader)
 		if err != nil {
 			t.Fatal(err)
 		}
 		serverKeys = append(serverKeys, privKey)
-		hops = append(hops, &coinswapHop{
-			pubKey:       privKey.PublicKey(),
-			kernelBlind:  kernelBlinds[i],
-			stealthBlind: stealthBlinds[i],
-			fee:          feePerHop,
+		hops = append(hops, &onion.Hop{
+			PubKey:       privKey.PublicKey(),
+			KernelBlind:  *kernelBlinds[i],
+			StealthBlind: *stealthBlinds[i],
+			Fee:          feePerHop,
 		})
 	}
+	hops[4].Output = output
 
-	onion, err := makeCoinswapOnion(hops, output)
+	onion, err := onion.New(hops)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	signCoinswapOnion(onion, input, coin.SpendKey)
+	onion.Sign(input, coin.SpendKey)
 
 	var (
 		inputCommit   = (*mw.Commitment)(onion.Input.Commitment).PubKey()
 		outputCommit  = output.Commitment.PubKey()
 		inputStealth  = (*mw.PublicKey)(onion.Input.InputPubKey).Add(&output.SenderPubKey)
 		outputStealth = (*mw.PublicKey)(onion.Input.OutputPubKey)
-		payloads      [][]byte
-		size          uint64
 	)
 
-	r := bytes.NewReader(onion.Payloads)
-	if err = binary.Read(r, binary.BigEndian, &size); err != nil {
-		t.Fatal(err)
-	}
-	for i := size; i > 0; i-- {
-		if err = binary.Read(r, binary.BigEndian, &size); err != nil {
-			t.Fatal(err)
-		}
-		payload := make([]byte, size)
-		if _, err = r.Read(payload); err != nil {
-			t.Fatal(err)
-		}
-		payloads = append(payloads, payload)
-	}
-
 	for i := 0; i < 5; i++ {
-		pubKey, err := ecdh.X25519().NewPublicKey(onion.PubKey)
+		hop, onion2, err := onion.Peel(serverKeys[i])
 		if err != nil {
 			t.Fatal(err)
 		}
-		secret, err := serverKeys[i].ECDH(pubKey)
-		if err != nil {
-			t.Fatal(err)
-		}
-		cipher := newOnionCipher(secret)
-		for j := i; j < 5; j++ {
-			cipher.XORKeyStream(payloads[j], payloads[j])
-		}
+		onion = onion2
 
-		r := bytes.NewReader(payloads[i])
-		ver, err := r.ReadByte()
-		if err != nil {
-			t.Fatal(err)
-		}
-		if ver != 0 {
-			t.Fatal("wrong onion version")
-		}
-		if _, err = r.Read(onion.PubKey); err != nil {
-			t.Fatal(err)
-		}
-
-		var kernelBlind mw.BlindingFactor
-		if _, err = r.Read(kernelBlind[:]); err != nil {
-			t.Fatal(err)
-		}
-		if kernelBlind != *hops[i].kernelBlind {
+		if hop.KernelBlind != hops[i].KernelBlind {
 			t.Fatal("kernel blind mismatch")
 		}
-		excess := mw.NewCommitment(&kernelBlind, 0)
+		excess := mw.NewCommitment(&hop.KernelBlind, 0)
 		inputCommit = inputCommit.Add(excess.PubKey())
 
-		var stealthBlind mw.SecretKey
-		if _, err = r.Read(stealthBlind[:]); err != nil {
-			t.Fatal(err)
-		}
-		if mw.BlindingFactor(stealthBlind) != *hops[i].stealthBlind {
+		if hop.StealthBlind != hops[i].StealthBlind {
 			t.Fatal("stealth blind mismatch")
 		}
-		outputStealth = outputStealth.Add(stealthBlind.PubKey())
+		sk := mw.SecretKey(hop.StealthBlind)
+		outputStealth = outputStealth.Add(sk.PubKey())
 
-		var fee uint64
-		if err = binary.Read(r, binary.BigEndian, &fee); err != nil {
-			t.Fatal(err)
-		}
-		if fee != hops[i].fee {
+		if hop.Fee != hops[i].Fee {
 			t.Fatal("fee mismatch")
 		}
-		excess = mw.NewCommitment(&mw.BlindingFactor{}, fee)
+		excess = mw.NewCommitment(&mw.BlindingFactor{}, hop.Fee)
 		outputCommit = outputCommit.Add(excess.PubKey())
 
-		hasOutput, err := r.ReadByte()
-		if err != nil {
-			t.Fatal(err)
-		}
-		switch hasOutput {
-		case 0:
-			if i == 4 {
-				t.Fatal("expected output")
-			}
-		case 1:
-			if i < 4 {
+		if i < 4 {
+			if hop.Output != nil {
 				t.Fatal("unexpected output")
 			}
-			var output2 wire.MwebOutput
-			if err = output2.Deserialize(r); err != nil {
-				t.Fatal(err)
+		} else {
+			if hop.Output == nil {
+				t.Fatal("expected output")
 			}
-			if !reflect.DeepEqual(output, &output2) {
+			if !reflect.DeepEqual(hop.Output, output) {
 				t.Fatal("output mismatch")
 			}
-		default:
-			t.Fatal("bad optional byte")
 		}
 	}
 
