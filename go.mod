@@ -8,9 +8,8 @@ require (
 	github.com/ethereum/go-ethereum v1.14.8
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/ltcmweb/coinswapd v0.0.0-20240830200526-8a1fe7f20446
-	github.com/ltcmweb/ltcd v0.24.4-0.20240719112335-b44674e8e4a0
+	github.com/ltcmweb/ltcd v0.24.4-0.20240901111830-ad3dba91c204
 	github.com/ltcmweb/ltcd/chaincfg/chainhash v1.0.3
-	github.com/ltcmweb/ltcd/ltcutil v1.2.4-0.20240719112335-b44674e8e4a0
 	github.com/ltcmweb/neutrino v0.17.1
 	github.com/ltcsuite/ltcwallet/walletdb v1.3.5
 	golang.org/x/mobile v0.0.0-20240506190922-a1a533f289d3

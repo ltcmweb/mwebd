@@ -74,10 +74,8 @@ func TestOnion(t *testing.T) {
 	onion.Sign(input, coin.SpendKey)
 
 	var (
-		inputCommit   = (*mw.Commitment)(onion.Input.Commitment).PubKey()
-		outputCommit  = output.Commitment.PubKey()
-		inputStealth  = (*mw.PublicKey)(onion.Input.InputPubKey).Add(&output.SenderPubKey)
-		outputStealth = (*mw.PublicKey)(onion.Input.OutputPubKey)
+		commit     = &input.Commitment
+		stealthSum = input.InputPubKey.Add(&output.SenderPubKey)
 	)
 
 	for i := 0; i < 5; i++ {
@@ -90,20 +88,18 @@ func TestOnion(t *testing.T) {
 		if hop.KernelBlind != hops[i].KernelBlind {
 			t.Fatal("kernel blind mismatch")
 		}
-		excess := mw.NewCommitment(&hop.KernelBlind, 0)
-		inputCommit = inputCommit.Add(excess.PubKey())
+		commit = commit.Add(mw.NewCommitment(&hop.KernelBlind, 0))
 
 		if hop.StealthBlind != hops[i].StealthBlind {
 			t.Fatal("stealth blind mismatch")
 		}
 		sk := mw.SecretKey(hop.StealthBlind)
-		outputStealth = outputStealth.Add(sk.PubKey())
+		stealthSum = stealthSum.Sub(sk.PubKey())
 
 		if hop.Fee != hops[i].Fee {
 			t.Fatal("fee mismatch")
 		}
-		excess = mw.NewCommitment(&mw.BlindingFactor{}, hop.Fee)
-		outputCommit = outputCommit.Add(excess.PubKey())
+		commit = commit.Sub(mw.NewCommitment(&mw.BlindingFactor{}, hop.Fee))
 
 		if i < 4 {
 			if hop.Output != nil {
@@ -119,10 +115,10 @@ func TestOnion(t *testing.T) {
 		}
 	}
 
-	if *inputCommit != *outputCommit {
+	if *commit != output.Commitment {
 		t.Fatal("commitment mismatch")
 	}
-	if *inputStealth != *outputStealth {
+	if *stealthSum != input.OutputPubKey {
 		t.Fatal("stealth sums unbalanced")
 	}
 }
