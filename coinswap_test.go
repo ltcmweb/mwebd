@@ -75,7 +75,7 @@ func TestOnion(t *testing.T) {
 
 	var (
 		commit     = &input.Commitment
-		stealthSum = input.InputPubKey.Add(&output.SenderPubKey)
+		stealthSum = input.OutputPubKey.Sub(input.InputPubKey)
 	)
 
 	for i := 0; i < 5; i++ {
@@ -94,7 +94,7 @@ func TestOnion(t *testing.T) {
 			t.Fatal("stealth blind mismatch")
 		}
 		sk := mw.SecretKey(hop.StealthBlind)
-		stealthSum = stealthSum.Sub(sk.PubKey())
+		stealthSum = stealthSum.Add(sk.PubKey())
 
 		if hop.Fee != hops[i].Fee {
 			t.Fatal("fee mismatch")
@@ -118,7 +118,7 @@ func TestOnion(t *testing.T) {
 	if *commit != output.Commitment {
 		t.Fatal("commitment mismatch")
 	}
-	if *stealthSum != input.OutputPubKey {
+	if *stealthSum != output.SenderPubKey {
 		t.Fatal("stealth sums unbalanced")
 	}
 }
