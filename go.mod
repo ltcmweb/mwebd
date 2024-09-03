@@ -1,16 +1,16 @@
 module github.com/ltcmweb/mwebd
 
-go 1.21
+go 1.23
 
 require (
 	github.com/btcsuite/btclog v0.0.0-20170628155309-84c8d2346e9f
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0
 	github.com/ethereum/go-ethereum v1.14.8
 	github.com/hashicorp/golang-lru/v2 v2.0.7
-	github.com/ltcmweb/coinswapd v0.0.0-20240830200526-8a1fe7f20446
-	github.com/ltcmweb/ltcd v0.24.4-0.20240901111830-ad3dba91c204
+	github.com/ltcmweb/coinswapd v0.0.0-20240903192604-318f32d2cbe8
+	github.com/ltcmweb/ltcd v0.25.0
 	github.com/ltcmweb/ltcd/chaincfg/chainhash v1.0.3
-	github.com/ltcmweb/neutrino v0.17.1
+	github.com/ltcmweb/neutrino v0.17.2
 	github.com/ltcsuite/ltcwallet/walletdb v1.3.5
 	golang.org/x/mobile v0.0.0-20240506190922-a1a533f289d3
 	google.golang.org/grpc v1.63.2
@@ -34,7 +34,7 @@ require (
 	github.com/klauspost/cpuid/v2 v2.2.7 // indirect
 	github.com/ltcmweb/ltcd/btcec/v2 v2.3.3 // indirect
 	github.com/ltcmweb/neutrino/cache v1.1.0 // indirect
-	github.com/ltcmweb/secp256k1 v0.1.0 // indirect
+	github.com/ltcmweb/secp256k1 v0.1.1 // indirect
 	github.com/ltcsuite/lnd/queue v1.1.0 // indirect
 	github.com/ltcsuite/lnd/ticker v1.1.0 // indirect
 	github.com/shirou/gopsutil v3.21.4-0.20210419000835-c7a38de76ee5+incompatible // indirect
