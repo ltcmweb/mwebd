@@ -8,6 +8,7 @@ import (
 	"errors"
 
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/ltcmweb/coinswapd/config"
 	"github.com/ltcmweb/coinswapd/onion"
 	"github.com/ltcmweb/ltcd/chaincfg/chainhash"
 	"github.com/ltcmweb/ltcd/ltcutil/mweb"
@@ -19,8 +20,10 @@ import (
 func (s *Server) Coinswap(ctx context.Context,
 	req *proto.CoinswapRequest) (*proto.CoinswapResponse, error) {
 
-	serverUrl := "http://127.0.0.1:8080"
-	serverPubKeys := [][]byte{}
+	nodes := config.AliveNodes("")
+	if len(nodes) == 0 {
+		return nil, errors.New("no alive nodes")
+	}
 
 	keychain := &mweb.Keychain{
 		Scan:  (*mw.SecretKey)(req.ScanSecret),
@@ -44,13 +47,19 @@ func (s *Server) Coinswap(ctx context.Context,
 	coin.CalculateOutputKey(keychain.SpendKey(req.AddrIndex))
 
 	var hops []*onion.Hop
-	for _, pk := range serverPubKeys {
-		pubKey, err := ecdh.X25519().NewPublicKey(pk)
+	for _, node := range nodes {
+		pubKeyBytes, err := hex.DecodeString(node.PubKey)
 		if err != nil {
 			return nil, err
 		}
-		fee := mweb.KernelWithStealthWeight * mweb.BaseMwebFee
-		fee += (mweb.StandardOutputWeight*mweb.BaseMwebFee)/len(serverPubKeys) + 1
+		pubKey, err := ecdh.X25519().NewPublicKey(pubKeyBytes)
+		if err != nil {
+			return nil, err
+		}
+
+		fee := mweb.StandardOutputWeight * mweb.BaseMwebFee
+		fee = (fee + len(nodes) - 1) / len(nodes)
+		fee += mweb.KernelWithStealthWeight * mweb.BaseMwebFee
 		hops = append(hops, &onion.Hop{PubKey: pubKey, Fee: uint64(fee)})
 	}
 
@@ -87,11 +96,11 @@ func (s *Server) Coinswap(ctx context.Context,
 	}
 	onion.Sign(input, coin.SpendKey)
 
-	client, err := rpc.DialContext(ctx, serverUrl)
+	client, err := rpc.DialContext(ctx, nodes[0].Url)
 	if err != nil {
 		return nil, err
 	}
-	if err = client.CallContext(ctx, nil, "swap", onion); err != nil {
+	if err = client.CallContext(ctx, nil, "swap_swap", onion); err != nil {
 		return nil, err
 	}
 
