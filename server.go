@@ -282,6 +282,15 @@ func (s *Server) Addresses(ctx context.Context,
 	return resp, nil
 }
 
+func Address(scanSecret, spendPubKey []byte, index int32) string {
+	keychain := &mweb.Keychain{
+		Scan:        (*mw.SecretKey)(scanSecret),
+		SpendPubKey: (*mw.PublicKey)(spendPubKey),
+	}
+	return ltcutil.NewAddressMweb(keychain.Address(uint32(index)),
+		&chaincfg.MainNetParams).String()
+}
+
 func (s *Server) Spent(ctx context.Context,
 	req *proto.SpentRequest) (*proto.SpentResponse, error) {
 

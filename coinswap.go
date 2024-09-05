@@ -2,7 +2,6 @@ package mwebd
 
 import (
 	"context"
-	"crypto/ecdh"
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
@@ -20,7 +19,7 @@ import (
 func (s *Server) Coinswap(ctx context.Context,
 	req *proto.CoinswapRequest) (*proto.CoinswapResponse, error) {
 
-	nodes := config.AliveNodes(ctx, "")
+	nodes := config.AliveNodes(ctx, nil)
 	if len(nodes) == 0 {
 		return nil, errors.New("no alive nodes")
 	}
@@ -48,19 +47,10 @@ func (s *Server) Coinswap(ctx context.Context,
 
 	var hops []*onion.Hop
 	for _, node := range nodes {
-		pubKeyBytes, err := hex.DecodeString(node.PubKey)
-		if err != nil {
-			return nil, err
-		}
-		pubKey, err := ecdh.X25519().NewPublicKey(pubKeyBytes)
-		if err != nil {
-			return nil, err
-		}
-
 		fee := mweb.StandardOutputWeight * mweb.BaseMwebFee
 		fee = (fee + len(nodes) - 1) / len(nodes)
 		fee += mweb.KernelWithStealthWeight * mweb.BaseMwebFee
-		hops = append(hops, &onion.Hop{PubKey: pubKey, Fee: uint64(fee)})
+		hops = append(hops, &onion.Hop{PubKey: node.PubKey(), Fee: uint64(fee)})
 	}
 
 	var fee uint64

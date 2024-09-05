@@ -7,7 +7,7 @@ require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0
 	github.com/ethereum/go-ethereum v1.14.8
 	github.com/hashicorp/golang-lru/v2 v2.0.7
-	github.com/ltcmweb/coinswapd v0.0.0-20240905094442-7f368f2bb6ea
+	github.com/ltcmweb/coinswapd v0.0.0-20240905184149-7d65088d91a7
 	github.com/ltcmweb/ltcd v0.25.0
 	github.com/ltcmweb/ltcd/chaincfg/chainhash v1.0.3
 	github.com/ltcmweb/neutrino v0.17.2
