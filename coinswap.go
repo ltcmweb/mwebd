@@ -20,7 +20,7 @@ import (
 func (s *Server) Coinswap(ctx context.Context,
 	req *proto.CoinswapRequest) (*proto.CoinswapResponse, error) {
 
-	nodes := config.AliveNodes("")
+	nodes := config.AliveNodes(ctx, "")
 	if len(nodes) == 0 {
 		return nil, errors.New("no alive nodes")
 	}
