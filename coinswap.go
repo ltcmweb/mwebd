@@ -95,7 +95,9 @@ func (s *Server) Coinswap(ctx context.Context,
 		return nil, err
 	}
 
-	return &proto.CoinswapResponse{}, nil
+	return &proto.CoinswapResponse{
+		OutputId: hex.EncodeToString(output.Hash()[:]),
+	}, nil
 }
 
 func makeCoinswapTx(coin *mweb.Coin, recipient *mweb.Recipient) (

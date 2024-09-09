@@ -190,4 +190,6 @@ message CoinswapRequest {
 }
 
 message CoinswapResponse {
+    // Output ID of the utxo created by the transaction.
+    string output_id = 1;
 }
