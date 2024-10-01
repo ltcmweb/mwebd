@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/btcsuite/btclog"
 	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/ltcmweb/ltcd/chaincfg"
 	"github.com/ltcmweb/ltcd/chaincfg/chainhash"
@@ -27,6 +28,7 @@ import (
 	"github.com/ltcsuite/ltcwallet/walletdb"
 	_ "github.com/ltcsuite/ltcwallet/walletdb/bdb"
 	"google.golang.org/grpc"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 type Server struct {
@@ -67,6 +69,15 @@ func NewServer(chain, dataDir, peer string) (s *Server, err error) {
 	if peer != "" {
 		cfg.AddPeers = []string{peer}
 	}
+
+	log := btclog.NewBackend(&lumberjack.Logger{
+		Filename:   filepath.Join(dataDir, "logs", "debug.log"),
+		MaxSize:    10,
+		MaxBackups: 10,
+		Compress:   true,
+	}).Logger("")
+	log.SetLevel(btclog.LevelDebug)
+	neutrino.UseLogger(log)
 
 	s.cs, err = neutrino.NewChainService(cfg)
 	if err != nil {

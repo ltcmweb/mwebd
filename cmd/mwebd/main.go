@@ -2,12 +2,11 @@ package main
 
 import (
 	"flag"
+	"log"
 	"os"
 	"time"
 
-	"github.com/btcsuite/btclog"
 	"github.com/ltcmweb/mwebd"
-	"github.com/ltcmweb/neutrino"
 )
 
 var (
@@ -19,19 +18,15 @@ var (
 
 func main() {
 	flag.Parse()
-	backend := btclog.NewBackend(os.Stdout)
-	log := backend.Logger("LTCN")
-	neutrino.UseLogger(log)
 
 	server, err := mwebd.NewServer(*chain, *dataDir, *peer)
 	if err != nil {
-		log.Errorf("Unable to start server: %v", err)
-		return
+		log.Fatalln("Unable to start server:", err)
 	}
 
 	go waitForParent(server)
 	if _, err = server.Start(*port); err != nil {
-		log.Errorf("Failed to listen: %v", err)
+		log.Fatalln("Failed to listen:", err)
 	}
 }
 

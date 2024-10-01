@@ -15,6 +15,7 @@ require (
 	golang.org/x/mobile v0.0.0-20240506190922-a1a533f289d3
 	google.golang.org/grpc v1.63.2
 	google.golang.org/protobuf v1.34.2
+	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 )
 
 require (
