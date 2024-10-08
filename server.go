@@ -9,6 +9,7 @@ import (
 	"net"
 	"path/filepath"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -293,13 +294,20 @@ func (s *Server) Addresses(ctx context.Context,
 	return resp, nil
 }
 
-func Address(scanSecret, spendPubKey []byte, index int32) string {
+func Addresses(scanSecret, spendPubKey []byte, i, j int32) string {
 	keychain := &mweb.Keychain{
 		Scan:        (*mw.SecretKey)(scanSecret),
 		SpendPubKey: (*mw.PublicKey)(spendPubKey),
 	}
-	return ltcutil.NewAddressMweb(keychain.Address(uint32(index)),
-		&chaincfg.MainNetParams).String()
+	var sb strings.Builder
+	for ; i < j; i++ {
+		if sb.Len() > 0 {
+			sb.WriteByte(',')
+		}
+		sb.WriteString(ltcutil.NewAddressMweb(keychain.Address(uint32(i)),
+			&chaincfg.MainNetParams).String())
+	}
+	return sb.String()
 }
 
 func (s *Server) Spent(ctx context.Context,
