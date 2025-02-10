@@ -10,10 +10,10 @@ import (
 )
 
 var (
-	chain   = flag.String("c", "mainnet", "Chain")
-	dataDir = flag.String("d", ".", "Data directory")
-	peer    = flag.String("p", "", "Connect to peer")
-	port    = flag.Int("l", 12345, "Listen port")
+	chain    = flag.String("c", "mainnet", "Chain")
+	dataDir  = flag.String("d", ".", "Data directory")
+	peer     = flag.String("p", "", "Connect to peer")
+	bindAddr = flag.String("l", "127.0.0.1:12345", "Bind address")
 )
 
 func main() {
@@ -25,7 +25,7 @@ func main() {
 	}
 
 	go waitForParent(server)
-	if _, err = server.Start(*port); err != nil {
+	if _, err = server.StartAddr(*bindAddr); err != nil {
 		log.Fatalln("Failed to listen:", err)
 	}
 }

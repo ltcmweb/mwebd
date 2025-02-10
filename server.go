@@ -90,7 +90,11 @@ func NewServer(chain, dataDir, peer string) (s *Server, err error) {
 }
 
 func (s *Server) Start(port int) (int, error) {
-	lis, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+	return s.StartAddr(fmt.Sprintf("127.0.0.1:%d", port))
+}
+
+func (s *Server) StartAddr(addr string) (int, error) {
+	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		return 0, err
 	}
@@ -98,11 +102,11 @@ func (s *Server) Start(port int) (int, error) {
 	s.server = grpc.NewServer()
 	proto.RegisterRpcServer(s.server, s)
 
-	if port == 0 {
+	if addr[len(addr)-2:] == ":0" {
 		go s.serve(lis)
 		return lis.Addr().(*net.TCPAddr).Port, nil
 	}
-	return port, s.serve(lis)
+	return 0, s.serve(lis)
 }
 
 func (s *Server) serve(lis net.Listener) error {
