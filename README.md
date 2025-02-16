@@ -39,7 +39,7 @@ The first mode can be built and installed globally with:
 
 The second mode is built with `gomobile`, e.g.
 
-    gomobile bind -target=android github.com/ltcmweb/mwebd
+    go tool gomobile bind -target=android github.com/ltcmweb/mwebd
 
 ### Fee estimation
 
