@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/url"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -28,6 +29,7 @@ import (
 	"github.com/ltcmweb/neutrino/mwebdb"
 	"github.com/ltcsuite/ltcwallet/walletdb"
 	_ "github.com/ltcsuite/ltcwallet/walletdb/bdb"
+	"golang.org/x/net/proxy"
 	"google.golang.org/grpc"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
@@ -43,7 +45,7 @@ type Server struct {
 	ledgerTx  *ledger.TxContext
 }
 
-func NewServer(chain, dataDir, peer string) (s *Server, err error) {
+func NewServer(chain, dataDir, peer string, proxy_addr string) (s *Server, err error) {
 	s = &Server{}
 	s.utxoChan = map[mw.SecretKey]map[*utxoStreamer]struct{}{}
 	s.coinCache, _ = lru.New[mw.SecretKey, *lru.Cache[chainhash.Hash, *mweb.Coin]](10)
@@ -54,10 +56,32 @@ func NewServer(chain, dataDir, peer string) (s *Server, err error) {
 		return
 	}
 
+	var dialer func(net.Addr) (net.Conn, error)
+	if len(proxy_addr) != 0 {
+		url, err := url.ParseRequestURI(proxy_addr)
+		if err != nil {
+			return nil, err
+		}
+		proxy_dialer, err := proxy.FromURL(url, proxy.Direct)
+		if err != nil {
+			return nil, err
+		}
+
+		dialer = func(addr net.Addr) (net.Conn, error) {
+			return proxy_dialer.Dial("tcp", addr.String())
+		}
+	} else {
+		dialer = func(addr net.Addr) (net.Conn, error) {
+			return net.Dial("tcp", addr.String())
+		}
+
+	}
+
 	cfg := neutrino.Config{
 		DataDir:     dataDir,
 		Database:    s.db,
 		ChainParams: chaincfg.MainNetParams,
+		Dialer:      dialer,
 	}
 
 	switch chain {

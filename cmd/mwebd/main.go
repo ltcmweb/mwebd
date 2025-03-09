@@ -14,12 +14,13 @@ var (
 	dataDir  = flag.String("d", ".", "Data directory")
 	peer     = flag.String("p", "", "Connect to peer")
 	bindAddr = flag.String("l", "127.0.0.1:12345", "Bind address")
+	proxy    = flag.String("proxy", "", "Proxy address, \"socks5://127.0.0.1:9050\"")
 )
 
 func main() {
 	flag.Parse()
 
-	server, err := mwebd.NewServer(*chain, *dataDir, *peer)
+	server, err := mwebd.NewServer(*chain, *dataDir, *peer, *proxy)
 	if err != nil {
 		log.Fatalln("Unable to start server:", err)
 	}
