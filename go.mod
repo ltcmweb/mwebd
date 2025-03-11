@@ -8,9 +8,9 @@ require (
 	github.com/ethereum/go-ethereum v1.14.8
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/ltcmweb/coinswapd v0.1.0
-	github.com/ltcmweb/ltcd v0.25.2
+	github.com/ltcmweb/ltcd v0.25.6
 	github.com/ltcmweb/ltcd/chaincfg/chainhash v1.0.3
-	github.com/ltcmweb/neutrino v0.17.2
+	github.com/ltcmweb/neutrino v0.17.3
 	github.com/ltcsuite/ltcwallet/walletdb v1.3.5
 	google.golang.org/grpc v1.63.2
 	google.golang.org/protobuf v1.34.2
