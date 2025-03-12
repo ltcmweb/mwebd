@@ -10,7 +10,7 @@ require (
 	github.com/ltcmweb/coinswapd v0.1.0
 	github.com/ltcmweb/ltcd v0.25.6
 	github.com/ltcmweb/ltcd/chaincfg/chainhash v1.0.3
-	github.com/ltcmweb/neutrino v0.17.3
+	github.com/ltcmweb/neutrino v0.17.4
 	github.com/ltcsuite/ltcwallet/walletdb v1.3.5
 	google.golang.org/grpc v1.63.2
 	google.golang.org/protobuf v1.34.2
@@ -21,6 +21,7 @@ require (
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/StackExchange/wmi v1.2.1 // indirect
 	github.com/aead/siphash v1.0.1 // indirect
+	github.com/alitto/pond/v2 v2.2.0 // indirect
 	github.com/btcsuite/go-socks v0.0.0-20170105172521-4720035b7bfd // indirect
 	github.com/btcsuite/websocket v0.0.0-20150119174127-31079b680792 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
