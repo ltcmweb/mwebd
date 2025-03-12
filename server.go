@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/url"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -28,6 +29,7 @@ import (
 	"github.com/ltcmweb/neutrino/mwebdb"
 	"github.com/ltcsuite/ltcwallet/walletdb"
 	_ "github.com/ltcsuite/ltcwallet/walletdb/bdb"
+	"golang.org/x/net/proxy"
 	"google.golang.org/grpc"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
@@ -43,36 +45,60 @@ type Server struct {
 	ledgerTx  *ledger.TxContext
 }
 
-func NewServer(chain, dataDir, peer string) (s *Server, err error) {
+type ServerArgs struct {
+	Chain, DataDir, PeerAddr, ProxyAddr string
+}
+
+func NewServer(chain, dataDir, peer string) (*Server, error) {
+	return NewServer2(&ServerArgs{
+		Chain: chain, DataDir: dataDir, PeerAddr: peer,
+	})
+}
+
+func NewServer2(args *ServerArgs) (s *Server, err error) {
 	s = &Server{}
 	s.utxoChan = map[mw.SecretKey]map[*utxoStreamer]struct{}{}
 	s.coinCache, _ = lru.New[mw.SecretKey, *lru.Cache[chainhash.Hash, *mweb.Coin]](10)
 
 	s.db, err = walletdb.Create(
-		"bdb", filepath.Join(dataDir, "neutrino.db"), false, time.Minute)
+		"bdb", filepath.Join(args.DataDir, "neutrino.db"), false, time.Minute)
 	if err != nil {
 		return
 	}
 
 	cfg := neutrino.Config{
-		DataDir:     dataDir,
+		DataDir:     args.DataDir,
 		Database:    s.db,
 		ChainParams: chaincfg.MainNetParams,
 	}
 
-	switch chain {
+	switch args.Chain {
 	case "testnet":
 		cfg.ChainParams = chaincfg.TestNet4Params
 	case "regtest":
 		cfg.ChainParams = chaincfg.RegressionNetParams
 	}
 
-	if peer != "" {
-		cfg.AddPeers = []string{peer}
+	if args.PeerAddr != "" {
+		cfg.AddPeers = []string{args.PeerAddr}
+	}
+
+	if args.ProxyAddr != "" {
+		url, err := url.Parse(args.ProxyAddr)
+		if err != nil {
+			return nil, err
+		}
+		dialer, err := proxy.FromURL(url, proxy.Direct)
+		if err != nil {
+			return nil, err
+		}
+		cfg.Dialer = func(addr net.Addr) (net.Conn, error) {
+			return dialer.Dial(addr.Network(), addr.String())
+		}
 	}
 
 	log := btclog.NewBackend(&lumberjack.Logger{
-		Filename:   filepath.Join(dataDir, "logs", "debug.log"),
+		Filename:   filepath.Join(args.DataDir, "logs", "debug.log"),
 		MaxSize:    10,
 		MaxBackups: 10,
 		Compress:   true,

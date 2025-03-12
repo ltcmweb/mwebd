@@ -12,6 +12,7 @@ require (
 	github.com/ltcmweb/ltcd/chaincfg/chainhash v1.0.3
 	github.com/ltcmweb/neutrino v0.17.4
 	github.com/ltcsuite/ltcwallet/walletdb v1.3.5
+	golang.org/x/net v0.35.0
 	google.golang.org/grpc v1.63.2
 	google.golang.org/protobuf v1.34.2
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
@@ -46,7 +47,6 @@ require (
 	golang.org/x/exp v0.0.0-20231110203233-9a3e6036ecaa // indirect
 	golang.org/x/mobile v0.0.0-20250210185054-b38b8813d607 // indirect
 	golang.org/x/mod v0.23.0 // indirect
-	golang.org/x/net v0.35.0 // indirect
 	golang.org/x/sync v0.11.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
 	golang.org/x/text v0.22.0 // indirect
