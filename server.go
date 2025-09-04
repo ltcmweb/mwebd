@@ -520,7 +520,7 @@ func (s *Server) Create(ctx context.Context,
 	tx.TxIn = txIns
 	tx.TxOut = nil
 	if pegin > 0 {
-		tx.AddTxOut(mweb.NewPegin(pegin, tx.Mweb.TxBody.Kernels[0]))
+		tx.AddTxOut(mweb.NewPegin(pegin, tx.Mweb.TxBody.Kernels[0].Hash()))
 	}
 
 	var buf bytes.Buffer

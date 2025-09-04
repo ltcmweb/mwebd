@@ -25,6 +25,18 @@ service Rpc {
     // Create the MWEB portion of a transaction.
     rpc Create(CreateRequest) returns (CreateResponse);
 
+    // Create a PSBT from a raw transaction.
+    rpc PsbtCreate(PsbtCreateRequest) returns (PsbtResponse);
+
+    // Add a MWEB input to a PSBT.
+    rpc PsbtAddInput(PsbtAddInputRequest) returns (PsbtResponse);
+
+    // Add a MWEB recipient to a PSBT.
+    rpc PsbtAddRecipient(PsbtAddRecipientRequest) returns (PsbtResponse);
+
+    // Add a MWEB peg-out to a PSBT.
+    rpc PsbtAddPegout(PsbtAddPegoutRequest) returns (PsbtResponse);
+
     // Process APDUs from the Ledger.
     rpc LedgerExchange(LedgerApdu) returns (LedgerApdu);
 
@@ -161,6 +173,59 @@ message CreateResponse {
     // The output IDs of any utxos created by the transaction,
     // in the same order as in the template.
     repeated string output_id = 2;
+}
+
+message PsbtCreateRequest {
+    // The raw bytes of the serialized transaction.
+    bytes raw_tx = 1;
+}
+
+message PsbtResponse {
+    // The raw bytes of the PSBT.
+    bytes raw_psbt = 1;
+}
+
+message PsbtAddInputRequest {
+    // The raw bytes of the PSBT.
+    bytes raw_psbt = 1;
+
+    // The scan secret or view key represents the account that
+    // the utxos being spent belong to.
+    bytes scan_secret = 2;
+
+    // The output ID of the utxo.
+    string output_id = 3;
+
+    // The address index of the utxo.
+    uint32 address_index = 4;
+}
+
+message PsbtAddRecipientRequest {
+    // The raw bytes of the PSBT.
+    bytes raw_psbt = 1;
+
+    // The value to send.
+    int64 value = 2;
+
+    // The scan public key of the recipient address.
+    bytes scan_pubkey = 3;
+
+    // The spend public key of the recipient address.
+    bytes spend_pubkey = 4;
+}
+
+message PsbtAddPegoutRequest {
+    // The raw bytes of the PSBT.
+    bytes raw_psbt = 1;
+
+    // The value to send.
+    int64 value = 2;
+
+    // The pk script to peg-out to.
+    bytes pk_script = 3;
+
+    // The fee rate per KB in litoshis.
+    uint64 fee_rate_per_kb = 4;
 }
 
 message BroadcastRequest {
