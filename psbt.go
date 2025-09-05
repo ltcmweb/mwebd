@@ -283,7 +283,12 @@ func (s *Server) PsbtExtract(ctx context.Context,
 		return nil, err
 	}
 
-	tx, err := psbt.Extract(p)
+	var tx *wire.MsgTx
+	if req.Unsigned {
+		tx, err = psbt.ExtractUnsignedTx(p)
+	} else {
+		tx, err = psbt.Extract(p)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -293,16 +298,19 @@ func (s *Server) PsbtExtract(ctx context.Context,
 		return nil, err
 	}
 
-	outputId := map[mw.Commitment]*chainhash.Hash{}
-	for _, output := range tx.Mweb.TxBody.Outputs {
-		outputId[output.Commitment] = output.Hash()
+	outputId := map[mw.Commitment]chainhash.Hash{}
+	if tx.Mweb != nil {
+		for _, output := range tx.Mweb.TxBody.Outputs {
+			outputId[output.Commitment] = *output.Hash()
+		}
 	}
 
 	resp := &proto.CreateResponse{RawTx: buf.Bytes()}
 	for _, pOutput := range p.Outputs {
 		if pOutput.OutputCommit != nil {
+			outputId := outputId[*pOutput.OutputCommit]
 			resp.OutputId = append(resp.OutputId,
-				hex.EncodeToString(outputId[*pOutput.OutputCommit][:]))
+				hex.EncodeToString(outputId[:]))
 		}
 	}
 

@@ -250,6 +250,9 @@ message PsbtSignRequest {
 message PsbtExtractRequest {
     // The raw bytes of the PSBT.
     bytes raw_psbt = 1;
+
+    // Extract the unsigned transaction.
+    bool unsigned = 2;
 }
 
 message BroadcastRequest {

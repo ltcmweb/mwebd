@@ -1052,7 +1052,9 @@ func (x *PsbtSignRequest) GetSpendSecret() []byte {
 type PsbtExtractRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The raw bytes of the PSBT.
-	RawPsbt       []byte `protobuf:"bytes,1,opt,name=raw_psbt,json=rawPsbt,proto3" json:"raw_psbt,omitempty"`
+	RawPsbt []byte `protobuf:"bytes,1,opt,name=raw_psbt,json=rawPsbt,proto3" json:"raw_psbt,omitempty"`
+	// Extract the unsigned transaction.
+	Unsigned      bool `protobuf:"varint,2,opt,name=unsigned,proto3" json:"unsigned,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1092,6 +1094,13 @@ func (x *PsbtExtractRequest) GetRawPsbt() []byte {
 		return x.RawPsbt
 	}
 	return nil
+}
+
+func (x *PsbtExtractRequest) GetUnsigned() bool {
+	if x != nil {
+		return x.Unsigned
+	}
+	return false
 }
 
 type BroadcastRequest struct {
@@ -1378,9 +1387,10 @@ const file_mwebd_proto_rawDesc = "" +
 	"\braw_psbt\x18\x01 \x01(\fR\arawPsbt\x12\x1f\n" +
 	"\vscan_secret\x18\x02 \x01(\fR\n" +
 	"scanSecret\x12!\n" +
-	"\fspend_secret\x18\x03 \x01(\fR\vspendSecret\"/\n" +
+	"\fspend_secret\x18\x03 \x01(\fR\vspendSecret\"K\n" +
 	"\x12PsbtExtractRequest\x12\x19\n" +
-	"\braw_psbt\x18\x01 \x01(\fR\arawPsbt\")\n" +
+	"\braw_psbt\x18\x01 \x01(\fR\arawPsbt\x12\x1a\n" +
+	"\bunsigned\x18\x02 \x01(\bR\bunsigned\")\n" +
 	"\x10BroadcastRequest\x12\x15\n" +
 	"\x06raw_tx\x18\x01 \x01(\fR\x05rawTx\"'\n" +
 	"\x11BroadcastResponse\x12\x12\n" +
