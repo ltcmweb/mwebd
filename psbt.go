@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"errors"
 	"math"
 
 	"github.com/ltcmweb/ltcd/chaincfg/chainhash"
@@ -61,11 +62,13 @@ func (s *Server) PsbtAddInput(ctx context.Context,
 	amount := ltcutil.Amount(coin.Value)
 
 	p.Inputs = append(p.Inputs, psbt.PInput{
-		MwebOutputId:     (*chainhash.Hash)(outputId),
-		MwebAddressIndex: &req.AddressIndex,
-		MwebAmount:       &amount,
-		MwebSharedSecret: coin.SharedSecret,
-		MwebCommit:       mw.SwitchCommit(coin.Blind, coin.Value),
+		MwebOutputId:          (*chainhash.Hash)(outputId),
+		MwebAddressIndex:      &req.AddressIndex,
+		MwebAmount:            &amount,
+		MwebSharedSecret:      coin.SharedSecret,
+		MwebKeyExchangePubkey: &output.Message.KeyExchangePubKey,
+		MwebCommit:            &output.Commitment,
+		MwebOutputPubkey:      &output.ReceiverPubKey,
 	})
 
 	s.addPeginIfNecessary(p)
@@ -150,7 +153,9 @@ func (s *Server) addPeginIfNecessary(p *psbt.Packet) {
 	var offset ltcutil.Amount
 
 	for _, pInput := range p.Inputs {
-		offset -= *pInput.MwebAmount
+		if pInput.MwebAmount != nil {
+			offset -= *pInput.MwebAmount
+		}
 	}
 	for _, pOutput := range p.Outputs {
 		offset += pOutput.Amount
@@ -172,16 +177,106 @@ func (s *Server) addPeginIfNecessary(p *psbt.Packet) {
 		}
 		*kernel.PeginAmount += offset
 	} else {
-		for i, pKernel := range p.Kernels {
+		for _, pKernel := range p.Kernels {
 			if pKernel.Signature == nil && pKernel.PeginAmount != nil {
 				if *pKernel.PeginAmount <= -offset {
 					offset += *pKernel.PeginAmount
-					p.Kernels[i].PeginAmount = nil
+					*pKernel.PeginAmount = 0
 				} else {
-					*p.Kernels[i].PeginAmount += offset
+					*pKernel.PeginAmount += offset
 					break
 				}
 			}
 		}
 	}
+}
+
+func (s *Server) PsbtSign(ctx context.Context,
+	req *proto.PsbtSignRequest) (*proto.PsbtResponse, error) {
+
+	p, err := psbt.NewFromRawBytes(bytes.NewReader(req.RawPsbt), false)
+	if err != nil {
+		return nil, err
+	}
+
+	keychain := &mweb.Keychain{
+		Scan:  (*mw.SecretKey)(req.ScanSecret),
+		Spend: (*mw.SecretKey)(req.SpendSecret),
+	}
+
+	addrIndex := map[mw.PublicKey]uint32{}
+	for _, pInput := range p.Inputs {
+		if pInput.MwebOutputPubkey != nil && pInput.MwebAddressIndex != nil {
+			addrIndex[*pInput.MwebOutputPubkey] = *pInput.MwebAddressIndex
+		}
+	}
+
+	inputSigner := psbt.BasicMwebInputSigner{DeriveOutputKeys: func(
+		Ko, Ke *mw.PublicKey, t *mw.SecretKey) (
+		*mw.BlindingFactor, *mw.SecretKey, error) {
+
+		if t == nil {
+			sA := Ke.Mul(keychain.Scan)
+			t = (*mw.SecretKey)(mw.Hashed(mw.HashTagDerive, sA[:]))
+		}
+
+		htOutKey := (*mw.SecretKey)(mw.Hashed(mw.HashTagOutKey, t[:]))
+		B_i := Ko.Div(htOutKey)
+		addr := &mw.StealthAddress{Scan: B_i.Mul(keychain.Scan), Spend: B_i}
+		if !addr.Equal(keychain.Address(addrIndex[*Ko])) {
+			return nil, nil, errors.New("address mismatch")
+		}
+
+		return (*mw.BlindingFactor)(mw.Hashed(mw.HashTagBlind, t[:])),
+			keychain.SpendKey(addrIndex[*Ko]).Mul(htOutKey), nil
+	}}
+
+	signer, err := psbt.NewSigner(p, inputSigner)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err = signer.SignMwebComponents(); err != nil {
+		return nil, err
+	}
+
+	var buf bytes.Buffer
+	if err = p.Serialize(&buf); err != nil {
+		return nil, err
+	}
+	return &proto.PsbtResponse{RawPsbt: buf.Bytes()}, nil
+}
+
+func (s *Server) PsbtExtract(ctx context.Context,
+	req *proto.PsbtExtractRequest) (*proto.CreateResponse, error) {
+
+	p, err := psbt.NewFromRawBytes(bytes.NewReader(req.RawPsbt), false)
+	if err != nil {
+		return nil, err
+	}
+
+	tx, err := psbt.Extract(p)
+	if err != nil {
+		return nil, err
+	}
+
+	var buf bytes.Buffer
+	if err = tx.Serialize(&buf); err != nil {
+		return nil, err
+	}
+
+	outputId := map[mw.Commitment]*chainhash.Hash{}
+	for _, output := range tx.Mweb.TxBody.Outputs {
+		outputId[output.Commitment] = output.Hash()
+	}
+
+	resp := &proto.CreateResponse{RawTx: buf.Bytes()}
+	for _, pOutput := range p.Outputs {
+		if pOutput.OutputCommit != nil {
+			resp.OutputId = append(resp.OutputId,
+				hex.EncodeToString(outputId[*pOutput.OutputCommit][:]))
+		}
+	}
+
+	return resp, nil
 }

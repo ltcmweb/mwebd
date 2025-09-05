@@ -37,6 +37,12 @@ service Rpc {
     // Add a MWEB peg-out to a PSBT.
     rpc PsbtAddPegout(PsbtAddPegoutRequest) returns (PsbtResponse);
 
+    // Sign the MWEB portion of a PSBT.
+    rpc PsbtSign(PsbtSignRequest) returns (PsbtResponse);
+
+    // Extract the raw transaction from a signed PSBT.
+    rpc PsbtExtract(PsbtExtractRequest) returns (CreateResponse);
+
     // Process APDUs from the Ledger.
     rpc LedgerExchange(LedgerApdu) returns (LedgerApdu);
 
@@ -226,6 +232,24 @@ message PsbtAddPegoutRequest {
 
     // The fee rate per KB in litoshis.
     uint64 fee_rate_per_kb = 4;
+}
+
+message PsbtSignRequest {
+    // The raw bytes of the PSBT.
+    bytes raw_psbt = 1;
+
+    // The scan secret or view key represents the account that
+    // the utxos being spent belong to.
+    bytes scan_secret = 2;
+
+    // The spend secret is the private key necessary for spending
+    // the utxos belonging to the account.
+    bytes spend_secret = 3;
+}
+
+message PsbtExtractRequest {
+    // The raw bytes of the PSBT.
+    bytes raw_psbt = 1;
 }
 
 message BroadcastRequest {

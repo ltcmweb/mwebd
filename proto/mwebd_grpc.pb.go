@@ -28,6 +28,8 @@ const (
 	Rpc_PsbtAddInput_FullMethodName     = "/Rpc/PsbtAddInput"
 	Rpc_PsbtAddRecipient_FullMethodName = "/Rpc/PsbtAddRecipient"
 	Rpc_PsbtAddPegout_FullMethodName    = "/Rpc/PsbtAddPegout"
+	Rpc_PsbtSign_FullMethodName         = "/Rpc/PsbtSign"
+	Rpc_PsbtExtract_FullMethodName      = "/Rpc/PsbtExtract"
 	Rpc_LedgerExchange_FullMethodName   = "/Rpc/LedgerExchange"
 	Rpc_Broadcast_FullMethodName        = "/Rpc/Broadcast"
 	Rpc_Coinswap_FullMethodName         = "/Rpc/Coinswap"
@@ -62,6 +64,10 @@ type RpcClient interface {
 	PsbtAddRecipient(ctx context.Context, in *PsbtAddRecipientRequest, opts ...grpc.CallOption) (*PsbtResponse, error)
 	// Add a MWEB peg-out to a PSBT.
 	PsbtAddPegout(ctx context.Context, in *PsbtAddPegoutRequest, opts ...grpc.CallOption) (*PsbtResponse, error)
+	// Sign the MWEB portion of a PSBT.
+	PsbtSign(ctx context.Context, in *PsbtSignRequest, opts ...grpc.CallOption) (*PsbtResponse, error)
+	// Extract the raw transaction from a signed PSBT.
+	PsbtExtract(ctx context.Context, in *PsbtExtractRequest, opts ...grpc.CallOption) (*CreateResponse, error)
 	// Process APDUs from the Ledger.
 	LedgerExchange(ctx context.Context, in *LedgerApdu, opts ...grpc.CallOption) (*LedgerApdu, error)
 	// Broadcast a transaction to the network. This is provided as
@@ -178,6 +184,26 @@ func (c *rpcClient) PsbtAddPegout(ctx context.Context, in *PsbtAddPegoutRequest,
 	return out, nil
 }
 
+func (c *rpcClient) PsbtSign(ctx context.Context, in *PsbtSignRequest, opts ...grpc.CallOption) (*PsbtResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PsbtResponse)
+	err := c.cc.Invoke(ctx, Rpc_PsbtSign_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *rpcClient) PsbtExtract(ctx context.Context, in *PsbtExtractRequest, opts ...grpc.CallOption) (*CreateResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateResponse)
+	err := c.cc.Invoke(ctx, Rpc_PsbtExtract_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *rpcClient) LedgerExchange(ctx context.Context, in *LedgerApdu, opts ...grpc.CallOption) (*LedgerApdu, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(LedgerApdu)
@@ -237,6 +263,10 @@ type RpcServer interface {
 	PsbtAddRecipient(context.Context, *PsbtAddRecipientRequest) (*PsbtResponse, error)
 	// Add a MWEB peg-out to a PSBT.
 	PsbtAddPegout(context.Context, *PsbtAddPegoutRequest) (*PsbtResponse, error)
+	// Sign the MWEB portion of a PSBT.
+	PsbtSign(context.Context, *PsbtSignRequest) (*PsbtResponse, error)
+	// Extract the raw transaction from a signed PSBT.
+	PsbtExtract(context.Context, *PsbtExtractRequest) (*CreateResponse, error)
 	// Process APDUs from the Ledger.
 	LedgerExchange(context.Context, *LedgerApdu) (*LedgerApdu, error)
 	// Broadcast a transaction to the network. This is provided as
@@ -280,6 +310,12 @@ func (UnimplementedRpcServer) PsbtAddRecipient(context.Context, *PsbtAddRecipien
 }
 func (UnimplementedRpcServer) PsbtAddPegout(context.Context, *PsbtAddPegoutRequest) (*PsbtResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PsbtAddPegout not implemented")
+}
+func (UnimplementedRpcServer) PsbtSign(context.Context, *PsbtSignRequest) (*PsbtResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PsbtSign not implemented")
+}
+func (UnimplementedRpcServer) PsbtExtract(context.Context, *PsbtExtractRequest) (*CreateResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PsbtExtract not implemented")
 }
 func (UnimplementedRpcServer) LedgerExchange(context.Context, *LedgerApdu) (*LedgerApdu, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LedgerExchange not implemented")
@@ -466,6 +502,42 @@ func _Rpc_PsbtAddPegout_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Rpc_PsbtSign_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PsbtSignRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RpcServer).PsbtSign(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Rpc_PsbtSign_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RpcServer).PsbtSign(ctx, req.(*PsbtSignRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Rpc_PsbtExtract_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PsbtExtractRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RpcServer).PsbtExtract(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Rpc_PsbtExtract_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RpcServer).PsbtExtract(ctx, req.(*PsbtExtractRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Rpc_LedgerExchange_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(LedgerApdu)
 	if err := dec(in); err != nil {
@@ -558,6 +630,14 @@ var Rpc_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "PsbtAddPegout",
 			Handler:    _Rpc_PsbtAddPegout_Handler,
+		},
+		{
+			MethodName: "PsbtSign",
+			Handler:    _Rpc_PsbtSign_Handler,
+		},
+		{
+			MethodName: "PsbtExtract",
+			Handler:    _Rpc_PsbtExtract_Handler,
 		},
 		{
 			MethodName: "LedgerExchange",
