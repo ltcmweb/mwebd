@@ -19,18 +19,34 @@ import (
 func (s *Server) PsbtCreate(ctx context.Context,
 	req *proto.PsbtCreateRequest) (*proto.PsbtResponse, error) {
 
-	var tx wire.MsgTx
-	if err := tx.Deserialize(bytes.NewReader(req.RawTx)); err != nil {
-		return nil, err
+	tx := wire.NewMsgTx(2)
+	if req.RawTx != nil {
+		if err := tx.Deserialize(bytes.NewReader(req.RawTx)); err != nil {
+			return nil, err
+		}
 	}
 
-	p, err := psbt.NewFromUnsignedTx(&tx)
-	if err != nil {
-		return nil, err
+	p := &psbt.Packet{
+		PsbtVersion:      2,
+		TxVersion:        tx.Version,
+		FallbackLocktime: &tx.LockTime,
+	}
+	for _, txIn := range tx.TxIn {
+		p.Inputs = append(p.Inputs, psbt.PInput{
+			PrevoutHash:  &txIn.PreviousOutPoint.Hash,
+			PrevoutIndex: &txIn.PreviousOutPoint.Index,
+			Sequence:     &txIn.Sequence,
+		})
+	}
+	for _, txOut := range tx.TxOut {
+		p.Outputs = append(p.Outputs, psbt.POutput{
+			Amount:   ltcutil.Amount(txOut.Value),
+			PKScript: txOut.PkScript,
+		})
 	}
 
 	var buf bytes.Buffer
-	if err = p.Serialize(&buf); err != nil {
+	if err := p.Serialize(&buf); err != nil {
 		return nil, err
 	}
 	return &proto.PsbtResponse{RawPsbt: buf.Bytes()}, nil
@@ -89,7 +105,14 @@ func (s *Server) getKernelIndex(p *psbt.Packet) (index int) {
 	}
 	if index == len(p.Kernels) {
 		fee := ltcutil.Amount(mweb.KernelWithStealthWeight * mweb.BaseMwebFee)
-		p.Kernels = append(p.Kernels, psbt.PKernel{Fee: &fee})
+		pKernel := psbt.PKernel{Fee: &fee}
+		if p.FallbackLocktime != nil &&
+			*p.FallbackLocktime > 0 &&
+			*p.FallbackLocktime < 500_000_000 {
+			lockHeight := int32(*p.FallbackLocktime)
+			pKernel.LockHeight = &lockHeight
+		}
+		p.Kernels = append(p.Kernels, pKernel)
 	}
 	return
 }
@@ -158,7 +181,9 @@ func (s *Server) addPeginIfNecessary(p *psbt.Packet) {
 		}
 	}
 	for _, pOutput := range p.Outputs {
-		offset += pOutput.Amount
+		if pOutput.StealthAddress != nil || pOutput.OutputCommit != nil {
+			offset += pOutput.Amount
+		}
 	}
 
 	for _, pKernel := range p.Kernels {
@@ -168,10 +193,13 @@ func (s *Server) addPeginIfNecessary(p *psbt.Packet) {
 		if pKernel.PeginAmount != nil {
 			offset -= *pKernel.PeginAmount
 		}
+		for _, pegout := range pKernel.PegOuts {
+			offset += ltcutil.Amount(pegout.Value)
+		}
 	}
 
+	kernel := &p.Kernels[s.getKernelIndex(p)]
 	if offset > 0 {
-		kernel := &p.Kernels[s.getKernelIndex(p)]
 		if kernel.PeginAmount == nil {
 			kernel.PeginAmount = new(ltcutil.Amount)
 		}
