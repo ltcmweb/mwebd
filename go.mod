@@ -8,7 +8,8 @@ require (
 	github.com/ethereum/go-ethereum v1.14.8
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/ltcmweb/coinswapd v0.1.0
-	github.com/ltcmweb/ltcd v0.25.8
+	github.com/ltcmweb/ltcd v0.25.9
+	github.com/ltcmweb/ltcd/btcec/v2 v2.3.3
 	github.com/ltcmweb/ltcd/chaincfg/chainhash v1.0.3
 	github.com/ltcmweb/neutrino v0.17.4
 	github.com/ltcsuite/ltcwallet/walletdb v1.3.5
@@ -34,7 +35,6 @@ require (
 	github.com/holiman/uint256 v1.3.1 // indirect
 	github.com/kkdai/bstream v1.0.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.7 // indirect
-	github.com/ltcmweb/ltcd/btcec/v2 v2.3.3 // indirect
 	github.com/ltcmweb/neutrino/cache v1.1.0 // indirect
 	github.com/ltcmweb/secp256k1 v0.1.1 // indirect
 	github.com/ltcsuite/lnd/queue v1.1.0 // indirect

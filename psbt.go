@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"math"
+	"strings"
 
 	"github.com/ltcmweb/ltcd/btcec/v2"
 	"github.com/ltcmweb/ltcd/btcec/v2/ecdsa"
@@ -50,17 +51,17 @@ func (s *Server) PsbtCreate(ctx context.Context,
 		})
 	}
 
-	var buf bytes.Buffer
-	if err := p.Serialize(&buf); err != nil {
+	b64, err := p.B64Encode()
+	if err != nil {
 		return nil, err
 	}
-	return &proto.PsbtResponse{RawPsbt: buf.Bytes()}, nil
+	return &proto.PsbtResponse{PsbtB64: b64}, nil
 }
 
 func (s *Server) PsbtAddInput(ctx context.Context,
 	req *proto.PsbtAddInputRequest) (*proto.PsbtResponse, error) {
 
-	p, err := psbt.NewFromRawBytes(bytes.NewReader(req.RawPsbt), false)
+	p, err := psbt.NewFromRawBytes(strings.NewReader(req.PsbtB64), true)
 	if err != nil {
 		return nil, err
 	}
@@ -94,11 +95,11 @@ func (s *Server) PsbtAddInput(ctx context.Context,
 
 	s.addPeginIfNecessary(p)
 
-	var buf bytes.Buffer
-	if err = p.Serialize(&buf); err != nil {
+	b64, err := p.B64Encode()
+	if err != nil {
 		return nil, err
 	}
-	return &proto.PsbtResponse{RawPsbt: buf.Bytes()}, nil
+	return &proto.PsbtResponse{PsbtB64: b64}, nil
 }
 
 func (s *Server) getKernelIndex(p *psbt.Packet) (index int) {
@@ -125,7 +126,7 @@ func (s *Server) getKernelIndex(p *psbt.Packet) (index int) {
 func (s *Server) PsbtAddRecipient(ctx context.Context,
 	req *proto.PsbtAddRecipientRequest) (*proto.PsbtResponse, error) {
 
-	p, err := psbt.NewFromRawBytes(bytes.NewReader(req.RawPsbt), false)
+	p, err := psbt.NewFromRawBytes(strings.NewReader(req.PsbtB64), true)
 	if err != nil {
 		return nil, err
 	}
@@ -143,17 +144,17 @@ func (s *Server) PsbtAddRecipient(ctx context.Context,
 
 	s.addPeginIfNecessary(p)
 
-	var buf bytes.Buffer
-	if err = p.Serialize(&buf); err != nil {
+	b64, err := p.B64Encode()
+	if err != nil {
 		return nil, err
 	}
-	return &proto.PsbtResponse{RawPsbt: buf.Bytes()}, nil
+	return &proto.PsbtResponse{PsbtB64: b64}, nil
 }
 
 func (s *Server) PsbtAddPegout(ctx context.Context,
 	req *proto.PsbtAddPegoutRequest) (*proto.PsbtResponse, error) {
 
-	p, err := psbt.NewFromRawBytes(bytes.NewReader(req.RawPsbt), false)
+	p, err := psbt.NewFromRawBytes(strings.NewReader(req.PsbtB64), true)
 	if err != nil {
 		return nil, err
 	}
@@ -170,11 +171,11 @@ func (s *Server) PsbtAddPegout(ctx context.Context,
 
 	s.addPeginIfNecessary(p)
 
-	var buf bytes.Buffer
-	if err = p.Serialize(&buf); err != nil {
+	b64, err := p.B64Encode()
+	if err != nil {
 		return nil, err
 	}
-	return &proto.PsbtResponse{RawPsbt: buf.Bytes()}, nil
+	return &proto.PsbtResponse{PsbtB64: b64}, nil
 }
 
 func (s *Server) addPeginIfNecessary(p *psbt.Packet) {
@@ -227,7 +228,7 @@ func (s *Server) addPeginIfNecessary(p *psbt.Packet) {
 func (s *Server) PsbtSign(ctx context.Context,
 	req *proto.PsbtSignRequest) (*proto.PsbtResponse, error) {
 
-	p, err := psbt.NewFromRawBytes(bytes.NewReader(req.RawPsbt), false)
+	p, err := psbt.NewFromRawBytes(strings.NewReader(req.PsbtB64), true)
 	if err != nil {
 		return nil, err
 	}
@@ -273,17 +274,17 @@ func (s *Server) PsbtSign(ctx context.Context,
 		return nil, err
 	}
 
-	var buf bytes.Buffer
-	if err = p.Serialize(&buf); err != nil {
+	b64, err := p.B64Encode()
+	if err != nil {
 		return nil, err
 	}
-	return &proto.PsbtResponse{RawPsbt: buf.Bytes()}, nil
+	return &proto.PsbtResponse{PsbtB64: b64}, nil
 }
 
 func (s *Server) PsbtSignNonMweb(ctx context.Context,
 	req *proto.PsbtSignNonMwebRequest) (*proto.PsbtResponse, error) {
 
-	p, err := psbt.NewFromRawBytes(bytes.NewReader(req.RawPsbt), false)
+	p, err := psbt.NewFromRawBytes(strings.NewReader(req.PsbtB64), true)
 	if err != nil {
 		return nil, err
 	}
@@ -308,11 +309,11 @@ func (s *Server) PsbtSignNonMweb(ctx context.Context,
 	}
 
 	key, pub := btcec.PrivKeyFromBytes(req.PrivKey)
-	sig := ecdsa.Sign(key, digest)
+	sig := ecdsa.Sign(key, digest).Serialize()
+	sig = append(sig, byte(txscript.SigHashAll))
 
 	u := psbt.Updater{Upsbt: p}
-	_, err = u.Sign(int(req.Index), sig.Serialize(),
-		pub.SerializeCompressed(), nil, nil)
+	_, err = u.Sign(int(req.Index), sig, pub.SerializeCompressed(), nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -320,17 +321,17 @@ func (s *Server) PsbtSignNonMweb(ctx context.Context,
 		return nil, err
 	}
 
-	var buf bytes.Buffer
-	if err = p.Serialize(&buf); err != nil {
+	b64, err := p.B64Encode()
+	if err != nil {
 		return nil, err
 	}
-	return &proto.PsbtResponse{RawPsbt: buf.Bytes()}, nil
+	return &proto.PsbtResponse{PsbtB64: b64}, nil
 }
 
 func (s *Server) PsbtExtract(ctx context.Context,
 	req *proto.PsbtExtractRequest) (*proto.CreateResponse, error) {
 
-	p, err := psbt.NewFromRawBytes(bytes.NewReader(req.RawPsbt), false)
+	p, err := psbt.NewFromRawBytes(strings.NewReader(req.PsbtB64), true)
 	if err != nil {
 		return nil, err
 	}

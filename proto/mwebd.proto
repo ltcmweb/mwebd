@@ -198,13 +198,13 @@ message TxOut {
 }
 
 message PsbtResponse {
-    // The raw bytes of the PSBT.
-    bytes raw_psbt = 1;
+    // The PSBT in base64 encoding.
+    string psbt_b64 = 1;
 }
 
 message PsbtAddInputRequest {
-    // The raw bytes of the PSBT.
-    bytes raw_psbt = 1;
+    // The PSBT in base64 encoding.
+    string psbt_b64 = 1;
 
     // The scan secret or view key represents the account that
     // the utxos being spent belong to.
@@ -218,8 +218,8 @@ message PsbtAddInputRequest {
 }
 
 message PsbtAddRecipientRequest {
-    // The raw bytes of the PSBT.
-    bytes raw_psbt = 1;
+    // The PSBT in base64 encoding.
+    string psbt_b64 = 1;
 
     // The value to send.
     int64 value = 2;
@@ -232,8 +232,8 @@ message PsbtAddRecipientRequest {
 }
 
 message PsbtAddPegoutRequest {
-    // The raw bytes of the PSBT.
-    bytes raw_psbt = 1;
+    // The PSBT in base64 encoding.
+    string psbt_b64 = 1;
 
     // The value to send.
     int64 value = 2;
@@ -246,8 +246,8 @@ message PsbtAddPegoutRequest {
 }
 
 message PsbtSignRequest {
-    // The raw bytes of the PSBT.
-    bytes raw_psbt = 1;
+    // The PSBT in base64 encoding.
+    string psbt_b64 = 1;
 
     // The scan secret or view key represents the account that
     // the utxos being spent belong to.
@@ -259,8 +259,8 @@ message PsbtSignRequest {
 }
 
 message PsbtSignNonMwebRequest {
-    // The raw bytes of the PSBT.
-    bytes raw_psbt = 1;
+    // The PSBT in base64 encoding.
+    string psbt_b64 = 1;
 
     // The private key necessary for spending the input.
     bytes priv_key = 2;
@@ -270,8 +270,8 @@ message PsbtSignNonMwebRequest {
 }
 
 message PsbtExtractRequest {
-    // The raw bytes of the PSBT.
-    bytes raw_psbt = 1;
+    // The PSBT in base64 encoding.
+    string psbt_b64 = 1;
 
     // Extract the unsigned transaction.
     bool unsigned = 2;

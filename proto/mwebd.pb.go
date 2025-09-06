@@ -785,8 +785,8 @@ func (x *TxOut) GetPkScript() []byte {
 
 type PsbtResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// The raw bytes of the PSBT.
-	RawPsbt       []byte `protobuf:"bytes,1,opt,name=raw_psbt,json=rawPsbt,proto3" json:"raw_psbt,omitempty"`
+	// The PSBT in base64 encoding.
+	PsbtB64       string `protobuf:"bytes,1,opt,name=psbt_b64,json=psbtB64,proto3" json:"psbt_b64,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -821,17 +821,17 @@ func (*PsbtResponse) Descriptor() ([]byte, []int) {
 	return file_mwebd_proto_rawDescGZIP(), []int{13}
 }
 
-func (x *PsbtResponse) GetRawPsbt() []byte {
+func (x *PsbtResponse) GetPsbtB64() string {
 	if x != nil {
-		return x.RawPsbt
+		return x.PsbtB64
 	}
-	return nil
+	return ""
 }
 
 type PsbtAddInputRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// The raw bytes of the PSBT.
-	RawPsbt []byte `protobuf:"bytes,1,opt,name=raw_psbt,json=rawPsbt,proto3" json:"raw_psbt,omitempty"`
+	// The PSBT in base64 encoding.
+	PsbtB64 string `protobuf:"bytes,1,opt,name=psbt_b64,json=psbtB64,proto3" json:"psbt_b64,omitempty"`
 	// The scan secret or view key represents the account that
 	// the utxos being spent belong to.
 	ScanSecret []byte `protobuf:"bytes,2,opt,name=scan_secret,json=scanSecret,proto3" json:"scan_secret,omitempty"`
@@ -873,11 +873,11 @@ func (*PsbtAddInputRequest) Descriptor() ([]byte, []int) {
 	return file_mwebd_proto_rawDescGZIP(), []int{14}
 }
 
-func (x *PsbtAddInputRequest) GetRawPsbt() []byte {
+func (x *PsbtAddInputRequest) GetPsbtB64() string {
 	if x != nil {
-		return x.RawPsbt
+		return x.PsbtB64
 	}
-	return nil
+	return ""
 }
 
 func (x *PsbtAddInputRequest) GetScanSecret() []byte {
@@ -903,8 +903,8 @@ func (x *PsbtAddInputRequest) GetAddressIndex() uint32 {
 
 type PsbtAddRecipientRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// The raw bytes of the PSBT.
-	RawPsbt []byte `protobuf:"bytes,1,opt,name=raw_psbt,json=rawPsbt,proto3" json:"raw_psbt,omitempty"`
+	// The PSBT in base64 encoding.
+	PsbtB64 string `protobuf:"bytes,1,opt,name=psbt_b64,json=psbtB64,proto3" json:"psbt_b64,omitempty"`
 	// The value to send.
 	Value int64 `protobuf:"varint,2,opt,name=value,proto3" json:"value,omitempty"`
 	// The scan public key of the recipient address.
@@ -945,11 +945,11 @@ func (*PsbtAddRecipientRequest) Descriptor() ([]byte, []int) {
 	return file_mwebd_proto_rawDescGZIP(), []int{15}
 }
 
-func (x *PsbtAddRecipientRequest) GetRawPsbt() []byte {
+func (x *PsbtAddRecipientRequest) GetPsbtB64() string {
 	if x != nil {
-		return x.RawPsbt
+		return x.PsbtB64
 	}
-	return nil
+	return ""
 }
 
 func (x *PsbtAddRecipientRequest) GetValue() int64 {
@@ -975,8 +975,8 @@ func (x *PsbtAddRecipientRequest) GetSpendPubkey() []byte {
 
 type PsbtAddPegoutRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// The raw bytes of the PSBT.
-	RawPsbt []byte `protobuf:"bytes,1,opt,name=raw_psbt,json=rawPsbt,proto3" json:"raw_psbt,omitempty"`
+	// The PSBT in base64 encoding.
+	PsbtB64 string `protobuf:"bytes,1,opt,name=psbt_b64,json=psbtB64,proto3" json:"psbt_b64,omitempty"`
 	// The value to send.
 	Value int64 `protobuf:"varint,2,opt,name=value,proto3" json:"value,omitempty"`
 	// The pk script to peg-out to.
@@ -1017,11 +1017,11 @@ func (*PsbtAddPegoutRequest) Descriptor() ([]byte, []int) {
 	return file_mwebd_proto_rawDescGZIP(), []int{16}
 }
 
-func (x *PsbtAddPegoutRequest) GetRawPsbt() []byte {
+func (x *PsbtAddPegoutRequest) GetPsbtB64() string {
 	if x != nil {
-		return x.RawPsbt
+		return x.PsbtB64
 	}
-	return nil
+	return ""
 }
 
 func (x *PsbtAddPegoutRequest) GetValue() int64 {
@@ -1047,8 +1047,8 @@ func (x *PsbtAddPegoutRequest) GetFeeRatePerKb() uint64 {
 
 type PsbtSignRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// The raw bytes of the PSBT.
-	RawPsbt []byte `protobuf:"bytes,1,opt,name=raw_psbt,json=rawPsbt,proto3" json:"raw_psbt,omitempty"`
+	// The PSBT in base64 encoding.
+	PsbtB64 string `protobuf:"bytes,1,opt,name=psbt_b64,json=psbtB64,proto3" json:"psbt_b64,omitempty"`
 	// The scan secret or view key represents the account that
 	// the utxos being spent belong to.
 	ScanSecret []byte `protobuf:"bytes,2,opt,name=scan_secret,json=scanSecret,proto3" json:"scan_secret,omitempty"`
@@ -1089,11 +1089,11 @@ func (*PsbtSignRequest) Descriptor() ([]byte, []int) {
 	return file_mwebd_proto_rawDescGZIP(), []int{17}
 }
 
-func (x *PsbtSignRequest) GetRawPsbt() []byte {
+func (x *PsbtSignRequest) GetPsbtB64() string {
 	if x != nil {
-		return x.RawPsbt
+		return x.PsbtB64
 	}
-	return nil
+	return ""
 }
 
 func (x *PsbtSignRequest) GetScanSecret() []byte {
@@ -1112,8 +1112,8 @@ func (x *PsbtSignRequest) GetSpendSecret() []byte {
 
 type PsbtSignNonMwebRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// The raw bytes of the PSBT.
-	RawPsbt []byte `protobuf:"bytes,1,opt,name=raw_psbt,json=rawPsbt,proto3" json:"raw_psbt,omitempty"`
+	// The PSBT in base64 encoding.
+	PsbtB64 string `protobuf:"bytes,1,opt,name=psbt_b64,json=psbtB64,proto3" json:"psbt_b64,omitempty"`
 	// The private key necessary for spending the input.
 	PrivKey []byte `protobuf:"bytes,2,opt,name=priv_key,json=privKey,proto3" json:"priv_key,omitempty"`
 	// The index of the input to sign.
@@ -1152,11 +1152,11 @@ func (*PsbtSignNonMwebRequest) Descriptor() ([]byte, []int) {
 	return file_mwebd_proto_rawDescGZIP(), []int{18}
 }
 
-func (x *PsbtSignNonMwebRequest) GetRawPsbt() []byte {
+func (x *PsbtSignNonMwebRequest) GetPsbtB64() string {
 	if x != nil {
-		return x.RawPsbt
+		return x.PsbtB64
 	}
-	return nil
+	return ""
 }
 
 func (x *PsbtSignNonMwebRequest) GetPrivKey() []byte {
@@ -1175,8 +1175,8 @@ func (x *PsbtSignNonMwebRequest) GetIndex() uint32 {
 
 type PsbtExtractRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// The raw bytes of the PSBT.
-	RawPsbt []byte `protobuf:"bytes,1,opt,name=raw_psbt,json=rawPsbt,proto3" json:"raw_psbt,omitempty"`
+	// The PSBT in base64 encoding.
+	PsbtB64 string `protobuf:"bytes,1,opt,name=psbt_b64,json=psbtB64,proto3" json:"psbt_b64,omitempty"`
 	// Extract the unsigned transaction.
 	Unsigned      bool `protobuf:"varint,2,opt,name=unsigned,proto3" json:"unsigned,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -1213,11 +1213,11 @@ func (*PsbtExtractRequest) Descriptor() ([]byte, []int) {
 	return file_mwebd_proto_rawDescGZIP(), []int{19}
 }
 
-func (x *PsbtExtractRequest) GetRawPsbt() []byte {
+func (x *PsbtExtractRequest) GetPsbtB64() string {
 	if x != nil {
-		return x.RawPsbt
+		return x.PsbtB64
 	}
-	return nil
+	return ""
 }
 
 func (x *PsbtExtractRequest) GetUnsigned() bool {
@@ -1493,35 +1493,35 @@ const file_mwebd_proto_rawDesc = "" +
 	"\x05value\x18\x01 \x01(\x03R\x05value\x12\x1b\n" +
 	"\tpk_script\x18\x02 \x01(\fR\bpkScript\")\n" +
 	"\fPsbtResponse\x12\x19\n" +
-	"\braw_psbt\x18\x01 \x01(\fR\arawPsbt\"\x93\x01\n" +
+	"\bpsbt_b64\x18\x01 \x01(\tR\apsbtB64\"\x93\x01\n" +
 	"\x13PsbtAddInputRequest\x12\x19\n" +
-	"\braw_psbt\x18\x01 \x01(\fR\arawPsbt\x12\x1f\n" +
+	"\bpsbt_b64\x18\x01 \x01(\tR\apsbtB64\x12\x1f\n" +
 	"\vscan_secret\x18\x02 \x01(\fR\n" +
 	"scanSecret\x12\x1b\n" +
 	"\toutput_id\x18\x03 \x01(\tR\boutputId\x12#\n" +
 	"\raddress_index\x18\x04 \x01(\rR\faddressIndex\"\x8e\x01\n" +
 	"\x17PsbtAddRecipientRequest\x12\x19\n" +
-	"\braw_psbt\x18\x01 \x01(\fR\arawPsbt\x12\x14\n" +
+	"\bpsbt_b64\x18\x01 \x01(\tR\apsbtB64\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\x03R\x05value\x12\x1f\n" +
 	"\vscan_pubkey\x18\x03 \x01(\fR\n" +
 	"scanPubkey\x12!\n" +
 	"\fspend_pubkey\x18\x04 \x01(\fR\vspendPubkey\"\x8b\x01\n" +
 	"\x14PsbtAddPegoutRequest\x12\x19\n" +
-	"\braw_psbt\x18\x01 \x01(\fR\arawPsbt\x12\x14\n" +
+	"\bpsbt_b64\x18\x01 \x01(\tR\apsbtB64\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\x03R\x05value\x12\x1b\n" +
 	"\tpk_script\x18\x03 \x01(\fR\bpkScript\x12%\n" +
 	"\x0ffee_rate_per_kb\x18\x04 \x01(\x04R\ffeeRatePerKb\"p\n" +
 	"\x0fPsbtSignRequest\x12\x19\n" +
-	"\braw_psbt\x18\x01 \x01(\fR\arawPsbt\x12\x1f\n" +
+	"\bpsbt_b64\x18\x01 \x01(\tR\apsbtB64\x12\x1f\n" +
 	"\vscan_secret\x18\x02 \x01(\fR\n" +
 	"scanSecret\x12!\n" +
 	"\fspend_secret\x18\x03 \x01(\fR\vspendSecret\"d\n" +
 	"\x16PsbtSignNonMwebRequest\x12\x19\n" +
-	"\braw_psbt\x18\x01 \x01(\fR\arawPsbt\x12\x19\n" +
+	"\bpsbt_b64\x18\x01 \x01(\tR\apsbtB64\x12\x19\n" +
 	"\bpriv_key\x18\x02 \x01(\fR\aprivKey\x12\x14\n" +
 	"\x05index\x18\x03 \x01(\rR\x05index\"K\n" +
 	"\x12PsbtExtractRequest\x12\x19\n" +
-	"\braw_psbt\x18\x01 \x01(\fR\arawPsbt\x12\x1a\n" +
+	"\bpsbt_b64\x18\x01 \x01(\tR\apsbtB64\x12\x1a\n" +
 	"\bunsigned\x18\x02 \x01(\bR\bunsigned\")\n" +
 	"\x10BroadcastRequest\x12\x15\n" +
 	"\x06raw_tx\x18\x01 \x01(\fR\x05rawTx\"'\n" +
