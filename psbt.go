@@ -7,11 +7,14 @@ import (
 	"errors"
 	"math"
 
+	"github.com/ltcmweb/ltcd/btcec/v2"
+	"github.com/ltcmweb/ltcd/btcec/v2/ecdsa"
 	"github.com/ltcmweb/ltcd/chaincfg/chainhash"
 	"github.com/ltcmweb/ltcd/ltcutil"
 	"github.com/ltcmweb/ltcd/ltcutil/mweb"
 	"github.com/ltcmweb/ltcd/ltcutil/mweb/mw"
 	"github.com/ltcmweb/ltcd/ltcutil/psbt"
+	"github.com/ltcmweb/ltcd/txscript"
 	"github.com/ltcmweb/ltcd/wire"
 	"github.com/ltcmweb/mwebd/proto"
 )
@@ -31,8 +34,10 @@ func (s *Server) PsbtCreate(ctx context.Context,
 		TxVersion:        tx.Version,
 		FallbackLocktime: &tx.LockTime,
 	}
-	for _, txIn := range tx.TxIn {
+	for i, txIn := range tx.TxIn {
+		txOut := req.WitnessUtxo[i]
 		p.Inputs = append(p.Inputs, psbt.PInput{
+			WitnessUtxo:  wire.NewTxOut(txOut.Value, txOut.PkScript),
 			PrevoutHash:  &txIn.PreviousOutPoint.Hash,
 			PrevoutIndex: &txIn.PreviousOutPoint.Index,
 			Sequence:     &txIn.Sequence,
@@ -265,6 +270,53 @@ func (s *Server) PsbtSign(ctx context.Context,
 	}
 
 	if _, err = signer.SignMwebComponents(); err != nil {
+		return nil, err
+	}
+
+	var buf bytes.Buffer
+	if err = p.Serialize(&buf); err != nil {
+		return nil, err
+	}
+	return &proto.PsbtResponse{RawPsbt: buf.Bytes()}, nil
+}
+
+func (s *Server) PsbtSignNonMweb(ctx context.Context,
+	req *proto.PsbtSignNonMwebRequest) (*proto.PsbtResponse, error) {
+
+	p, err := psbt.NewFromRawBytes(bytes.NewReader(req.RawPsbt), false)
+	if err != nil {
+		return nil, err
+	}
+
+	tx, err := psbt.ExtractUnsignedTx(p)
+	if err != nil {
+		return nil, err
+	}
+
+	fetcher := txscript.NewMultiPrevOutFetcher(nil)
+	for _, pInput := range p.Inputs {
+		op := wire.NewOutPoint(pInput.PrevoutHash, *pInput.PrevoutIndex)
+		fetcher.AddPrevOut(*op, pInput.WitnessUtxo)
+	}
+
+	txOut := p.Inputs[req.Index].WitnessUtxo
+	digest, err := txscript.CalcWitnessSigHash(
+		txOut.PkScript, txscript.NewTxSigHashes(tx, fetcher),
+		txscript.SigHashAll, tx, int(req.Index), txOut.Value)
+	if err != nil {
+		return nil, err
+	}
+
+	key, pub := btcec.PrivKeyFromBytes(req.PrivKey)
+	sig := ecdsa.Sign(key, digest)
+
+	u := psbt.Updater{Upsbt: p}
+	_, err = u.Sign(int(req.Index), sig.Serialize(),
+		pub.SerializeCompressed(), nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	if err = psbt.Finalize(p, int(req.Index)); err != nil {
 		return nil, err
 	}
 

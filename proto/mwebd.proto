@@ -40,6 +40,9 @@ service Rpc {
     // Sign the MWEB portion of a PSBT.
     rpc PsbtSign(PsbtSignRequest) returns (PsbtResponse);
 
+    // Sign a non-MWEB input of a PSBT.
+    rpc PsbtSignNonMweb(PsbtSignNonMwebRequest) returns (PsbtResponse);
+
     // Extract the raw transaction from a signed PSBT.
     rpc PsbtExtract(PsbtExtractRequest) returns (CreateResponse);
 
@@ -184,6 +187,14 @@ message CreateResponse {
 message PsbtCreateRequest {
     // The raw bytes of the serialized transaction.
     bytes raw_tx = 1;
+
+    // Witness utxos for each input.
+    repeated TxOut witness_utxo = 2;
+}
+
+message TxOut {
+    int64 value = 1;
+    bytes pk_script = 2;
 }
 
 message PsbtResponse {
@@ -245,6 +256,17 @@ message PsbtSignRequest {
     // The spend secret is the private key necessary for spending
     // the utxos belonging to the account.
     bytes spend_secret = 3;
+}
+
+message PsbtSignNonMwebRequest {
+    // The raw bytes of the PSBT.
+    bytes raw_psbt = 1;
+
+    // The private key necessary for spending the input.
+    bytes priv_key = 2;
+
+    // The index of the input to sign.
+    uint32 index = 3;
 }
 
 message PsbtExtractRequest {

@@ -29,6 +29,7 @@ const (
 	Rpc_PsbtAddRecipient_FullMethodName = "/Rpc/PsbtAddRecipient"
 	Rpc_PsbtAddPegout_FullMethodName    = "/Rpc/PsbtAddPegout"
 	Rpc_PsbtSign_FullMethodName         = "/Rpc/PsbtSign"
+	Rpc_PsbtSignNonMweb_FullMethodName  = "/Rpc/PsbtSignNonMweb"
 	Rpc_PsbtExtract_FullMethodName      = "/Rpc/PsbtExtract"
 	Rpc_LedgerExchange_FullMethodName   = "/Rpc/LedgerExchange"
 	Rpc_Broadcast_FullMethodName        = "/Rpc/Broadcast"
@@ -66,6 +67,8 @@ type RpcClient interface {
 	PsbtAddPegout(ctx context.Context, in *PsbtAddPegoutRequest, opts ...grpc.CallOption) (*PsbtResponse, error)
 	// Sign the MWEB portion of a PSBT.
 	PsbtSign(ctx context.Context, in *PsbtSignRequest, opts ...grpc.CallOption) (*PsbtResponse, error)
+	// Sign a non-MWEB input of a PSBT.
+	PsbtSignNonMweb(ctx context.Context, in *PsbtSignNonMwebRequest, opts ...grpc.CallOption) (*PsbtResponse, error)
 	// Extract the raw transaction from a signed PSBT.
 	PsbtExtract(ctx context.Context, in *PsbtExtractRequest, opts ...grpc.CallOption) (*CreateResponse, error)
 	// Process APDUs from the Ledger.
@@ -194,6 +197,16 @@ func (c *rpcClient) PsbtSign(ctx context.Context, in *PsbtSignRequest, opts ...g
 	return out, nil
 }
 
+func (c *rpcClient) PsbtSignNonMweb(ctx context.Context, in *PsbtSignNonMwebRequest, opts ...grpc.CallOption) (*PsbtResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PsbtResponse)
+	err := c.cc.Invoke(ctx, Rpc_PsbtSignNonMweb_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *rpcClient) PsbtExtract(ctx context.Context, in *PsbtExtractRequest, opts ...grpc.CallOption) (*CreateResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CreateResponse)
@@ -265,6 +278,8 @@ type RpcServer interface {
 	PsbtAddPegout(context.Context, *PsbtAddPegoutRequest) (*PsbtResponse, error)
 	// Sign the MWEB portion of a PSBT.
 	PsbtSign(context.Context, *PsbtSignRequest) (*PsbtResponse, error)
+	// Sign a non-MWEB input of a PSBT.
+	PsbtSignNonMweb(context.Context, *PsbtSignNonMwebRequest) (*PsbtResponse, error)
 	// Extract the raw transaction from a signed PSBT.
 	PsbtExtract(context.Context, *PsbtExtractRequest) (*CreateResponse, error)
 	// Process APDUs from the Ledger.
@@ -313,6 +328,9 @@ func (UnimplementedRpcServer) PsbtAddPegout(context.Context, *PsbtAddPegoutReque
 }
 func (UnimplementedRpcServer) PsbtSign(context.Context, *PsbtSignRequest) (*PsbtResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PsbtSign not implemented")
+}
+func (UnimplementedRpcServer) PsbtSignNonMweb(context.Context, *PsbtSignNonMwebRequest) (*PsbtResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PsbtSignNonMweb not implemented")
 }
 func (UnimplementedRpcServer) PsbtExtract(context.Context, *PsbtExtractRequest) (*CreateResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PsbtExtract not implemented")
@@ -520,6 +538,24 @@ func _Rpc_PsbtSign_Handler(srv interface{}, ctx context.Context, dec func(interf
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Rpc_PsbtSignNonMweb_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PsbtSignNonMwebRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RpcServer).PsbtSignNonMweb(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Rpc_PsbtSignNonMweb_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RpcServer).PsbtSignNonMweb(ctx, req.(*PsbtSignNonMwebRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Rpc_PsbtExtract_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(PsbtExtractRequest)
 	if err := dec(in); err != nil {
@@ -634,6 +670,10 @@ var Rpc_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "PsbtSign",
 			Handler:    _Rpc_PsbtSign_Handler,
+		},
+		{
+			MethodName: "PsbtSignNonMweb",
+			Handler:    _Rpc_PsbtSignNonMweb_Handler,
 		},
 		{
 			MethodName: "PsbtExtract",
