@@ -210,11 +210,11 @@ func (s *Server) addPeginIfNecessary(p *psbt.Packet) {
 		}
 		*kernel.PeginAmount += offset
 	} else {
-		for _, pKernel := range p.Kernels {
+		for i, pKernel := range p.Kernels {
 			if pKernel.Signature == nil && pKernel.PeginAmount != nil {
 				if *pKernel.PeginAmount <= -offset {
 					offset += *pKernel.PeginAmount
-					*pKernel.PeginAmount = 0
+					p.Kernels[i].PeginAmount = nil
 				} else {
 					*pKernel.PeginAmount += offset
 					break
