@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/ltcmweb/ltcd/btcec/v2"
-	"github.com/ltcmweb/ltcd/btcec/v2/ecdsa"
 	"github.com/ltcmweb/ltcd/chaincfg/chainhash"
 	"github.com/ltcmweb/ltcd/ltcutil"
 	"github.com/ltcmweb/ltcd/ltcutil/mweb"
@@ -301,16 +300,13 @@ func (s *Server) PsbtSignNonMweb(ctx context.Context,
 	}
 
 	txOut := p.Inputs[req.Index].WitnessUtxo
-	digest, err := txscript.CalcWitnessSigHash(
-		txOut.PkScript, txscript.NewTxSigHashes(tx, fetcher),
-		txscript.SigHashAll, tx, int(req.Index), txOut.Value)
+	key, pub := btcec.PrivKeyFromBytes(req.PrivKey)
+	sig, err := txscript.RawTxInWitnessSignature(tx,
+		txscript.NewTxSigHashes(tx, fetcher), int(req.Index),
+		txOut.Value, txOut.PkScript, txscript.SigHashAll, key)
 	if err != nil {
 		return nil, err
 	}
-
-	key, pub := btcec.PrivKeyFromBytes(req.PrivKey)
-	sig := ecdsa.Sign(key, digest).Serialize()
-	sig = append(sig, byte(txscript.SigHashAll))
 
 	u := psbt.Updater{Upsbt: p}
 	_, err = u.Sign(int(req.Index), sig, pub.SerializeCompressed(), nil, nil)
