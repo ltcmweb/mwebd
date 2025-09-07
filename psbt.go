@@ -236,23 +236,41 @@ func (s *Server) PsbtGetRecipients(ctx context.Context,
 	chainParams := s.cs.ChainParams()
 	resp := &proto.PsbtGetRecipientsResponse{}
 
+	pkScriptToAddr := func(pkScript []byte) (ltcutil.Address, error) {
+		_, addr, n, err := txscript.ExtractPkScriptAddrs(pkScript, &chainParams)
+		if err != nil {
+			return nil, err
+		}
+		if n != 1 {
+			return nil, errors.New("pkscript doesn't encode just one address")
+		}
+		return addr[0], nil
+	}
+
 	for _, pOutput := range p.Outputs {
 		if pOutput.StealthAddress != nil {
 			addr = ltcutil.NewAddressMweb(pOutput.StealthAddress, &chainParams)
 		} else {
-			_, addrs, n, err := txscript.ExtractPkScriptAddrs(pOutput.PKScript, &chainParams)
-			if err != nil {
+			if addr, err = pkScriptToAddr(pOutput.PKScript); err != nil {
 				return nil, err
 			}
-			if n != 1 {
-				return nil, errors.New("pkscript doesn't encode just one address")
-			}
-			addr = addrs[0]
 		}
 		resp.Recipient = append(resp.Recipient, &proto.PsbtRecipient{
 			Address: addr.String(),
 			Value:   int64(pOutput.Amount),
 		})
+	}
+
+	for _, pKernel := range p.Kernels {
+		for _, pegout := range pKernel.PegOuts {
+			if addr, err = pkScriptToAddr(pegout.PkScript); err != nil {
+				return nil, err
+			}
+			resp.Recipient = append(resp.Recipient, &proto.PsbtRecipient{
+				Address: addr.String(),
+				Value:   pegout.Value,
+			})
+		}
 	}
 
 	return resp, nil
