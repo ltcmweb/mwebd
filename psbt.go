@@ -224,6 +224,40 @@ func (s *Server) addPeginIfNecessary(p *psbt.Packet) {
 	}
 }
 
+func (s *Server) PsbtGetRecipients(ctx context.Context,
+	req *proto.PsbtGetRecipientsRequest) (*proto.PsbtGetRecipientsResponse, error) {
+
+	p, err := psbt.NewFromRawBytes(strings.NewReader(req.PsbtB64), true)
+	if err != nil {
+		return nil, err
+	}
+
+	var addr ltcutil.Address
+	chainParams := s.cs.ChainParams()
+	resp := &proto.PsbtGetRecipientsResponse{}
+
+	for _, pOutput := range p.Outputs {
+		if pOutput.StealthAddress != nil {
+			addr = ltcutil.NewAddressMweb(pOutput.StealthAddress, &chainParams)
+		} else {
+			_, addrs, n, err := txscript.ExtractPkScriptAddrs(pOutput.PKScript, &chainParams)
+			if err != nil {
+				return nil, err
+			}
+			if n != 1 {
+				return nil, errors.New("pkscript doesn't encode just one address")
+			}
+			addr = addrs[0]
+		}
+		resp.Recipient = append(resp.Recipient, &proto.PsbtRecipient{
+			Address: addr.String(),
+			Value:   int64(pOutput.Amount),
+		})
+	}
+
+	return resp, nil
+}
+
 func (s *Server) PsbtSign(ctx context.Context,
 	req *proto.PsbtSignRequest) (*proto.PsbtResponse, error) {
 
@@ -295,8 +329,10 @@ func (s *Server) PsbtSignNonMweb(ctx context.Context,
 
 	fetcher := txscript.NewMultiPrevOutFetcher(nil)
 	for _, pInput := range p.Inputs {
-		op := wire.NewOutPoint(pInput.PrevoutHash, *pInput.PrevoutIndex)
-		fetcher.AddPrevOut(*op, pInput.WitnessUtxo)
+		if pInput.MwebOutputId == nil {
+			op := wire.NewOutPoint(pInput.PrevoutHash, *pInput.PrevoutIndex)
+			fetcher.AddPrevOut(*op, pInput.WitnessUtxo)
+		}
 	}
 
 	txOut := p.Inputs[req.Index].WitnessUtxo

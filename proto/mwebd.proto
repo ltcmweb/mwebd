@@ -37,6 +37,9 @@ service Rpc {
     // Add a MWEB peg-out to a PSBT.
     rpc PsbtAddPegout(PsbtAddPegoutRequest) returns (PsbtResponse);
 
+    // Get the recipients of a PSBT.
+    rpc PsbtGetRecipients(PsbtGetRecipientsRequest) returns (PsbtGetRecipientsResponse);
+
     // Sign the MWEB portion of a PSBT.
     rpc PsbtSign(PsbtSignRequest) returns (PsbtResponse);
 
@@ -243,6 +246,20 @@ message PsbtAddPegoutRequest {
 
     // The fee rate per KB in litoshis.
     uint64 fee_rate_per_kb = 4;
+}
+
+message PsbtGetRecipientsRequest {
+    // The PSBT in base64 encoding.
+    string psbt_b64 = 1;
+}
+
+message PsbtGetRecipientsResponse {
+    repeated PsbtRecipient recipient = 1;
+}
+
+message PsbtRecipient {
+    string address = 1;
+    int64 value = 2;
 }
 
 message PsbtSignRequest {

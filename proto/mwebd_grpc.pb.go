@@ -19,21 +19,22 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Rpc_Status_FullMethodName           = "/Rpc/Status"
-	Rpc_Utxos_FullMethodName            = "/Rpc/Utxos"
-	Rpc_Addresses_FullMethodName        = "/Rpc/Addresses"
-	Rpc_Spent_FullMethodName            = "/Rpc/Spent"
-	Rpc_Create_FullMethodName           = "/Rpc/Create"
-	Rpc_PsbtCreate_FullMethodName       = "/Rpc/PsbtCreate"
-	Rpc_PsbtAddInput_FullMethodName     = "/Rpc/PsbtAddInput"
-	Rpc_PsbtAddRecipient_FullMethodName = "/Rpc/PsbtAddRecipient"
-	Rpc_PsbtAddPegout_FullMethodName    = "/Rpc/PsbtAddPegout"
-	Rpc_PsbtSign_FullMethodName         = "/Rpc/PsbtSign"
-	Rpc_PsbtSignNonMweb_FullMethodName  = "/Rpc/PsbtSignNonMweb"
-	Rpc_PsbtExtract_FullMethodName      = "/Rpc/PsbtExtract"
-	Rpc_LedgerExchange_FullMethodName   = "/Rpc/LedgerExchange"
-	Rpc_Broadcast_FullMethodName        = "/Rpc/Broadcast"
-	Rpc_Coinswap_FullMethodName         = "/Rpc/Coinswap"
+	Rpc_Status_FullMethodName            = "/Rpc/Status"
+	Rpc_Utxos_FullMethodName             = "/Rpc/Utxos"
+	Rpc_Addresses_FullMethodName         = "/Rpc/Addresses"
+	Rpc_Spent_FullMethodName             = "/Rpc/Spent"
+	Rpc_Create_FullMethodName            = "/Rpc/Create"
+	Rpc_PsbtCreate_FullMethodName        = "/Rpc/PsbtCreate"
+	Rpc_PsbtAddInput_FullMethodName      = "/Rpc/PsbtAddInput"
+	Rpc_PsbtAddRecipient_FullMethodName  = "/Rpc/PsbtAddRecipient"
+	Rpc_PsbtAddPegout_FullMethodName     = "/Rpc/PsbtAddPegout"
+	Rpc_PsbtGetRecipients_FullMethodName = "/Rpc/PsbtGetRecipients"
+	Rpc_PsbtSign_FullMethodName          = "/Rpc/PsbtSign"
+	Rpc_PsbtSignNonMweb_FullMethodName   = "/Rpc/PsbtSignNonMweb"
+	Rpc_PsbtExtract_FullMethodName       = "/Rpc/PsbtExtract"
+	Rpc_LedgerExchange_FullMethodName    = "/Rpc/LedgerExchange"
+	Rpc_Broadcast_FullMethodName         = "/Rpc/Broadcast"
+	Rpc_Coinswap_FullMethodName          = "/Rpc/Coinswap"
 )
 
 // RpcClient is the client API for Rpc service.
@@ -65,6 +66,8 @@ type RpcClient interface {
 	PsbtAddRecipient(ctx context.Context, in *PsbtAddRecipientRequest, opts ...grpc.CallOption) (*PsbtResponse, error)
 	// Add a MWEB peg-out to a PSBT.
 	PsbtAddPegout(ctx context.Context, in *PsbtAddPegoutRequest, opts ...grpc.CallOption) (*PsbtResponse, error)
+	// Get the recipients of a PSBT.
+	PsbtGetRecipients(ctx context.Context, in *PsbtGetRecipientsRequest, opts ...grpc.CallOption) (*PsbtGetRecipientsResponse, error)
 	// Sign the MWEB portion of a PSBT.
 	PsbtSign(ctx context.Context, in *PsbtSignRequest, opts ...grpc.CallOption) (*PsbtResponse, error)
 	// Sign a non-MWEB input of a PSBT.
@@ -187,6 +190,16 @@ func (c *rpcClient) PsbtAddPegout(ctx context.Context, in *PsbtAddPegoutRequest,
 	return out, nil
 }
 
+func (c *rpcClient) PsbtGetRecipients(ctx context.Context, in *PsbtGetRecipientsRequest, opts ...grpc.CallOption) (*PsbtGetRecipientsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PsbtGetRecipientsResponse)
+	err := c.cc.Invoke(ctx, Rpc_PsbtGetRecipients_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *rpcClient) PsbtSign(ctx context.Context, in *PsbtSignRequest, opts ...grpc.CallOption) (*PsbtResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(PsbtResponse)
@@ -276,6 +289,8 @@ type RpcServer interface {
 	PsbtAddRecipient(context.Context, *PsbtAddRecipientRequest) (*PsbtResponse, error)
 	// Add a MWEB peg-out to a PSBT.
 	PsbtAddPegout(context.Context, *PsbtAddPegoutRequest) (*PsbtResponse, error)
+	// Get the recipients of a PSBT.
+	PsbtGetRecipients(context.Context, *PsbtGetRecipientsRequest) (*PsbtGetRecipientsResponse, error)
 	// Sign the MWEB portion of a PSBT.
 	PsbtSign(context.Context, *PsbtSignRequest) (*PsbtResponse, error)
 	// Sign a non-MWEB input of a PSBT.
@@ -325,6 +340,9 @@ func (UnimplementedRpcServer) PsbtAddRecipient(context.Context, *PsbtAddRecipien
 }
 func (UnimplementedRpcServer) PsbtAddPegout(context.Context, *PsbtAddPegoutRequest) (*PsbtResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PsbtAddPegout not implemented")
+}
+func (UnimplementedRpcServer) PsbtGetRecipients(context.Context, *PsbtGetRecipientsRequest) (*PsbtGetRecipientsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PsbtGetRecipients not implemented")
 }
 func (UnimplementedRpcServer) PsbtSign(context.Context, *PsbtSignRequest) (*PsbtResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PsbtSign not implemented")
@@ -520,6 +538,24 @@ func _Rpc_PsbtAddPegout_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Rpc_PsbtGetRecipients_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PsbtGetRecipientsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RpcServer).PsbtGetRecipients(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Rpc_PsbtGetRecipients_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RpcServer).PsbtGetRecipients(ctx, req.(*PsbtGetRecipientsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Rpc_PsbtSign_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(PsbtSignRequest)
 	if err := dec(in); err != nil {
@@ -666,6 +702,10 @@ var Rpc_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "PsbtAddPegout",
 			Handler:    _Rpc_PsbtAddPegout_Handler,
+		},
+		{
+			MethodName: "PsbtGetRecipients",
+			Handler:    _Rpc_PsbtGetRecipients_Handler,
 		},
 		{
 			MethodName: "PsbtSign",
