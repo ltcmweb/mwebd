@@ -247,6 +247,15 @@ func (s *Server) PsbtGetRecipients(ctx context.Context,
 		return addr[0], nil
 	}
 
+	for _, pInput := range p.Inputs {
+		switch {
+		case pInput.WitnessUtxo != nil:
+			resp.Fee += pInput.WitnessUtxo.Value
+		case pInput.MwebAmount != nil:
+			resp.Fee += int64(*pInput.MwebAmount)
+		}
+	}
+
 	for _, pOutput := range p.Outputs {
 		if pOutput.StealthAddress != nil {
 			addr = ltcutil.NewAddressMweb(pOutput.StealthAddress, &chainParams)
@@ -259,6 +268,7 @@ func (s *Server) PsbtGetRecipients(ctx context.Context,
 			Address: addr.String(),
 			Value:   int64(pOutput.Amount),
 		})
+		resp.Fee -= int64(pOutput.Amount)
 	}
 
 	for _, pKernel := range p.Kernels {
@@ -270,6 +280,7 @@ func (s *Server) PsbtGetRecipients(ctx context.Context,
 				Address: addr.String(),
 				Value:   pegout.Value,
 			})
+			resp.Fee -= pegout.Value
 		}
 	}
 

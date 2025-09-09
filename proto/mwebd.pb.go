@@ -1093,6 +1093,7 @@ func (x *PsbtGetRecipientsRequest) GetPsbtB64() string {
 type PsbtGetRecipientsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Recipient     []*PsbtRecipient       `protobuf:"bytes,1,rep,name=recipient,proto3" json:"recipient,omitempty"`
+	Fee           int64                  `protobuf:"varint,2,opt,name=fee,proto3" json:"fee,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1132,6 +1133,13 @@ func (x *PsbtGetRecipientsResponse) GetRecipient() []*PsbtRecipient {
 		return x.Recipient
 	}
 	return nil
+}
+
+func (x *PsbtGetRecipientsResponse) GetFee() int64 {
+	if x != nil {
+		return x.Fee
+	}
+	return 0
 }
 
 type PsbtRecipient struct {
@@ -1653,9 +1661,10 @@ const file_mwebd_proto_rawDesc = "" +
 	"\tpk_script\x18\x03 \x01(\fR\bpkScript\x12%\n" +
 	"\x0ffee_rate_per_kb\x18\x04 \x01(\x04R\ffeeRatePerKb\"5\n" +
 	"\x18PsbtGetRecipientsRequest\x12\x19\n" +
-	"\bpsbt_b64\x18\x01 \x01(\tR\apsbtB64\"I\n" +
+	"\bpsbt_b64\x18\x01 \x01(\tR\apsbtB64\"[\n" +
 	"\x19PsbtGetRecipientsResponse\x12,\n" +
-	"\trecipient\x18\x01 \x03(\v2\x0e.PsbtRecipientR\trecipient\"?\n" +
+	"\trecipient\x18\x01 \x03(\v2\x0e.PsbtRecipientR\trecipient\x12\x10\n" +
+	"\x03fee\x18\x02 \x01(\x03R\x03fee\"?\n" +
 	"\rPsbtRecipient\x12\x18\n" +
 	"\aaddress\x18\x01 \x01(\tR\aaddress\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\x03R\x05value\"p\n" +

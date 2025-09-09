@@ -255,6 +255,7 @@ message PsbtGetRecipientsRequest {
 
 message PsbtGetRecipientsResponse {
     repeated PsbtRecipient recipient = 1;
+    int64 fee = 2;
 }
 
 message PsbtRecipient {
