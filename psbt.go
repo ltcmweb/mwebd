@@ -363,18 +363,22 @@ func (s *Server) PsbtSignNonMweb(ctx context.Context,
 		return nil, err
 	}
 
+	txInIdx := 0
 	fetcher := txscript.NewMultiPrevOutFetcher(nil)
-	for _, pInput := range p.Inputs {
+	for i, pInput := range p.Inputs {
 		if pInput.MwebOutputId == nil {
 			op := wire.NewOutPoint(pInput.PrevoutHash, *pInput.PrevoutIndex)
 			fetcher.AddPrevOut(*op, pInput.WitnessUtxo)
+			if i < int(req.Index) {
+				txInIdx++
+			}
 		}
 	}
 
 	txOut := p.Inputs[req.Index].WitnessUtxo
 	key, pub := btcec.PrivKeyFromBytes(req.PrivKey)
 	sig, err := txscript.RawTxInWitnessSignature(tx,
-		txscript.NewTxSigHashes(tx, fetcher), int(req.Index),
+		txscript.NewTxSigHashes(tx, fetcher), txInIdx,
 		txOut.Value, txOut.PkScript, txscript.SigHashAll, key)
 	if err != nil {
 		return nil, err
