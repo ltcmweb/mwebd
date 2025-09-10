@@ -255,7 +255,8 @@ message PsbtGetRecipientsRequest {
 
 message PsbtGetRecipientsResponse {
     repeated PsbtRecipient recipient = 1;
-    int64 fee = 2;
+    repeated bytes input_pubkey = 2;
+    int64 fee = 3;
 }
 
 message PsbtRecipient {
