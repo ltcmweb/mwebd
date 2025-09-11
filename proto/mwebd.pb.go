@@ -904,13 +904,10 @@ func (x *PsbtAddInputRequest) GetAddressIndex() uint32 {
 type PsbtAddRecipientRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The PSBT in base64 encoding.
-	PsbtB64 string `protobuf:"bytes,1,opt,name=psbt_b64,json=psbtB64,proto3" json:"psbt_b64,omitempty"`
-	// The value to send.
-	Value int64 `protobuf:"varint,2,opt,name=value,proto3" json:"value,omitempty"`
-	// The scan public key of the recipient address.
-	ScanPubkey []byte `protobuf:"bytes,3,opt,name=scan_pubkey,json=scanPubkey,proto3" json:"scan_pubkey,omitempty"`
-	// The spend public key of the recipient address.
-	SpendPubkey   []byte `protobuf:"bytes,4,opt,name=spend_pubkey,json=spendPubkey,proto3" json:"spend_pubkey,omitempty"`
+	PsbtB64   string         `protobuf:"bytes,1,opt,name=psbt_b64,json=psbtB64,proto3" json:"psbt_b64,omitempty"`
+	Recipient *PsbtRecipient `protobuf:"bytes,2,opt,name=recipient,proto3" json:"recipient,omitempty"`
+	// The fee rate per KB in litoshis.
+	FeeRatePerKb  uint64 `protobuf:"varint,3,opt,name=fee_rate_per_kb,json=feeRatePerKb,proto3" json:"fee_rate_per_kb,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -952,93 +949,14 @@ func (x *PsbtAddRecipientRequest) GetPsbtB64() string {
 	return ""
 }
 
-func (x *PsbtAddRecipientRequest) GetValue() int64 {
+func (x *PsbtAddRecipientRequest) GetRecipient() *PsbtRecipient {
 	if x != nil {
-		return x.Value
-	}
-	return 0
-}
-
-func (x *PsbtAddRecipientRequest) GetScanPubkey() []byte {
-	if x != nil {
-		return x.ScanPubkey
+		return x.Recipient
 	}
 	return nil
 }
 
-func (x *PsbtAddRecipientRequest) GetSpendPubkey() []byte {
-	if x != nil {
-		return x.SpendPubkey
-	}
-	return nil
-}
-
-type PsbtAddPegoutRequest struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// The PSBT in base64 encoding.
-	PsbtB64 string `protobuf:"bytes,1,opt,name=psbt_b64,json=psbtB64,proto3" json:"psbt_b64,omitempty"`
-	// The value to send.
-	Value int64 `protobuf:"varint,2,opt,name=value,proto3" json:"value,omitempty"`
-	// The pk script to peg-out to.
-	PkScript []byte `protobuf:"bytes,3,opt,name=pk_script,json=pkScript,proto3" json:"pk_script,omitempty"`
-	// The fee rate per KB in litoshis.
-	FeeRatePerKb  uint64 `protobuf:"varint,4,opt,name=fee_rate_per_kb,json=feeRatePerKb,proto3" json:"fee_rate_per_kb,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *PsbtAddPegoutRequest) Reset() {
-	*x = PsbtAddPegoutRequest{}
-	mi := &file_mwebd_proto_msgTypes[16]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *PsbtAddPegoutRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*PsbtAddPegoutRequest) ProtoMessage() {}
-
-func (x *PsbtAddPegoutRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mwebd_proto_msgTypes[16]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use PsbtAddPegoutRequest.ProtoReflect.Descriptor instead.
-func (*PsbtAddPegoutRequest) Descriptor() ([]byte, []int) {
-	return file_mwebd_proto_rawDescGZIP(), []int{16}
-}
-
-func (x *PsbtAddPegoutRequest) GetPsbtB64() string {
-	if x != nil {
-		return x.PsbtB64
-	}
-	return ""
-}
-
-func (x *PsbtAddPegoutRequest) GetValue() int64 {
-	if x != nil {
-		return x.Value
-	}
-	return 0
-}
-
-func (x *PsbtAddPegoutRequest) GetPkScript() []byte {
-	if x != nil {
-		return x.PkScript
-	}
-	return nil
-}
-
-func (x *PsbtAddPegoutRequest) GetFeeRatePerKb() uint64 {
+func (x *PsbtAddRecipientRequest) GetFeeRatePerKb() uint64 {
 	if x != nil {
 		return x.FeeRatePerKb
 	}
@@ -1055,7 +973,7 @@ type PsbtGetRecipientsRequest struct {
 
 func (x *PsbtGetRecipientsRequest) Reset() {
 	*x = PsbtGetRecipientsRequest{}
-	mi := &file_mwebd_proto_msgTypes[17]
+	mi := &file_mwebd_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1067,7 +985,7 @@ func (x *PsbtGetRecipientsRequest) String() string {
 func (*PsbtGetRecipientsRequest) ProtoMessage() {}
 
 func (x *PsbtGetRecipientsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mwebd_proto_msgTypes[17]
+	mi := &file_mwebd_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1080,7 +998,7 @@ func (x *PsbtGetRecipientsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PsbtGetRecipientsRequest.ProtoReflect.Descriptor instead.
 func (*PsbtGetRecipientsRequest) Descriptor() ([]byte, []int) {
-	return file_mwebd_proto_rawDescGZIP(), []int{17}
+	return file_mwebd_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *PsbtGetRecipientsRequest) GetPsbtB64() string {
@@ -1101,7 +1019,7 @@ type PsbtGetRecipientsResponse struct {
 
 func (x *PsbtGetRecipientsResponse) Reset() {
 	*x = PsbtGetRecipientsResponse{}
-	mi := &file_mwebd_proto_msgTypes[18]
+	mi := &file_mwebd_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1113,7 +1031,7 @@ func (x *PsbtGetRecipientsResponse) String() string {
 func (*PsbtGetRecipientsResponse) ProtoMessage() {}
 
 func (x *PsbtGetRecipientsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mwebd_proto_msgTypes[18]
+	mi := &file_mwebd_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1126,7 +1044,7 @@ func (x *PsbtGetRecipientsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PsbtGetRecipientsResponse.ProtoReflect.Descriptor instead.
 func (*PsbtGetRecipientsResponse) Descriptor() ([]byte, []int) {
-	return file_mwebd_proto_rawDescGZIP(), []int{18}
+	return file_mwebd_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *PsbtGetRecipientsResponse) GetRecipient() []*PsbtRecipient {
@@ -1160,7 +1078,7 @@ type PsbtRecipient struct {
 
 func (x *PsbtRecipient) Reset() {
 	*x = PsbtRecipient{}
-	mi := &file_mwebd_proto_msgTypes[19]
+	mi := &file_mwebd_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1172,7 +1090,7 @@ func (x *PsbtRecipient) String() string {
 func (*PsbtRecipient) ProtoMessage() {}
 
 func (x *PsbtRecipient) ProtoReflect() protoreflect.Message {
-	mi := &file_mwebd_proto_msgTypes[19]
+	mi := &file_mwebd_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1185,7 +1103,7 @@ func (x *PsbtRecipient) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PsbtRecipient.ProtoReflect.Descriptor instead.
 func (*PsbtRecipient) Descriptor() ([]byte, []int) {
-	return file_mwebd_proto_rawDescGZIP(), []int{19}
+	return file_mwebd_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *PsbtRecipient) GetAddress() string {
@@ -1218,7 +1136,7 @@ type PsbtSignRequest struct {
 
 func (x *PsbtSignRequest) Reset() {
 	*x = PsbtSignRequest{}
-	mi := &file_mwebd_proto_msgTypes[20]
+	mi := &file_mwebd_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1230,7 +1148,7 @@ func (x *PsbtSignRequest) String() string {
 func (*PsbtSignRequest) ProtoMessage() {}
 
 func (x *PsbtSignRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mwebd_proto_msgTypes[20]
+	mi := &file_mwebd_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1243,7 +1161,7 @@ func (x *PsbtSignRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PsbtSignRequest.ProtoReflect.Descriptor instead.
 func (*PsbtSignRequest) Descriptor() ([]byte, []int) {
-	return file_mwebd_proto_rawDescGZIP(), []int{20}
+	return file_mwebd_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *PsbtSignRequest) GetPsbtB64() string {
@@ -1281,7 +1199,7 @@ type PsbtSignNonMwebRequest struct {
 
 func (x *PsbtSignNonMwebRequest) Reset() {
 	*x = PsbtSignNonMwebRequest{}
-	mi := &file_mwebd_proto_msgTypes[21]
+	mi := &file_mwebd_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1293,7 +1211,7 @@ func (x *PsbtSignNonMwebRequest) String() string {
 func (*PsbtSignNonMwebRequest) ProtoMessage() {}
 
 func (x *PsbtSignNonMwebRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mwebd_proto_msgTypes[21]
+	mi := &file_mwebd_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1306,7 +1224,7 @@ func (x *PsbtSignNonMwebRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PsbtSignNonMwebRequest.ProtoReflect.Descriptor instead.
 func (*PsbtSignNonMwebRequest) Descriptor() ([]byte, []int) {
-	return file_mwebd_proto_rawDescGZIP(), []int{21}
+	return file_mwebd_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *PsbtSignNonMwebRequest) GetPsbtB64() string {
@@ -1342,7 +1260,7 @@ type PsbtExtractRequest struct {
 
 func (x *PsbtExtractRequest) Reset() {
 	*x = PsbtExtractRequest{}
-	mi := &file_mwebd_proto_msgTypes[22]
+	mi := &file_mwebd_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1354,7 +1272,7 @@ func (x *PsbtExtractRequest) String() string {
 func (*PsbtExtractRequest) ProtoMessage() {}
 
 func (x *PsbtExtractRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mwebd_proto_msgTypes[22]
+	mi := &file_mwebd_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1367,7 +1285,7 @@ func (x *PsbtExtractRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PsbtExtractRequest.ProtoReflect.Descriptor instead.
 func (*PsbtExtractRequest) Descriptor() ([]byte, []int) {
-	return file_mwebd_proto_rawDescGZIP(), []int{22}
+	return file_mwebd_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *PsbtExtractRequest) GetPsbtB64() string {
@@ -1394,7 +1312,7 @@ type BroadcastRequest struct {
 
 func (x *BroadcastRequest) Reset() {
 	*x = BroadcastRequest{}
-	mi := &file_mwebd_proto_msgTypes[23]
+	mi := &file_mwebd_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1406,7 +1324,7 @@ func (x *BroadcastRequest) String() string {
 func (*BroadcastRequest) ProtoMessage() {}
 
 func (x *BroadcastRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mwebd_proto_msgTypes[23]
+	mi := &file_mwebd_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1419,7 +1337,7 @@ func (x *BroadcastRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BroadcastRequest.ProtoReflect.Descriptor instead.
 func (*BroadcastRequest) Descriptor() ([]byte, []int) {
-	return file_mwebd_proto_rawDescGZIP(), []int{23}
+	return file_mwebd_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *BroadcastRequest) GetRawTx() []byte {
@@ -1439,7 +1357,7 @@ type BroadcastResponse struct {
 
 func (x *BroadcastResponse) Reset() {
 	*x = BroadcastResponse{}
-	mi := &file_mwebd_proto_msgTypes[24]
+	mi := &file_mwebd_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1451,7 +1369,7 @@ func (x *BroadcastResponse) String() string {
 func (*BroadcastResponse) ProtoMessage() {}
 
 func (x *BroadcastResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mwebd_proto_msgTypes[24]
+	mi := &file_mwebd_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1464,7 +1382,7 @@ func (x *BroadcastResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BroadcastResponse.ProtoReflect.Descriptor instead.
 func (*BroadcastResponse) Descriptor() ([]byte, []int) {
-	return file_mwebd_proto_rawDescGZIP(), []int{24}
+	return file_mwebd_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *BroadcastResponse) GetTxid() string {
@@ -1492,7 +1410,7 @@ type CoinswapRequest struct {
 
 func (x *CoinswapRequest) Reset() {
 	*x = CoinswapRequest{}
-	mi := &file_mwebd_proto_msgTypes[25]
+	mi := &file_mwebd_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1504,7 +1422,7 @@ func (x *CoinswapRequest) String() string {
 func (*CoinswapRequest) ProtoMessage() {}
 
 func (x *CoinswapRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_mwebd_proto_msgTypes[25]
+	mi := &file_mwebd_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1517,7 +1435,7 @@ func (x *CoinswapRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CoinswapRequest.ProtoReflect.Descriptor instead.
 func (*CoinswapRequest) Descriptor() ([]byte, []int) {
-	return file_mwebd_proto_rawDescGZIP(), []int{25}
+	return file_mwebd_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *CoinswapRequest) GetScanSecret() []byte {
@@ -1558,7 +1476,7 @@ type CoinswapResponse struct {
 
 func (x *CoinswapResponse) Reset() {
 	*x = CoinswapResponse{}
-	mi := &file_mwebd_proto_msgTypes[26]
+	mi := &file_mwebd_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1570,7 +1488,7 @@ func (x *CoinswapResponse) String() string {
 func (*CoinswapResponse) ProtoMessage() {}
 
 func (x *CoinswapResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mwebd_proto_msgTypes[26]
+	mi := &file_mwebd_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1583,7 +1501,7 @@ func (x *CoinswapResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CoinswapResponse.ProtoReflect.Descriptor instead.
 func (*CoinswapResponse) Descriptor() ([]byte, []int) {
-	return file_mwebd_proto_rawDescGZIP(), []int{26}
+	return file_mwebd_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *CoinswapResponse) GetOutputId() string {
@@ -1656,18 +1574,11 @@ const file_mwebd_proto_rawDesc = "" +
 	"\vscan_secret\x18\x02 \x01(\fR\n" +
 	"scanSecret\x12\x1b\n" +
 	"\toutput_id\x18\x03 \x01(\tR\boutputId\x12#\n" +
-	"\raddress_index\x18\x04 \x01(\rR\faddressIndex\"\x8e\x01\n" +
+	"\raddress_index\x18\x04 \x01(\rR\faddressIndex\"\x89\x01\n" +
 	"\x17PsbtAddRecipientRequest\x12\x19\n" +
-	"\bpsbt_b64\x18\x01 \x01(\tR\apsbtB64\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\x03R\x05value\x12\x1f\n" +
-	"\vscan_pubkey\x18\x03 \x01(\fR\n" +
-	"scanPubkey\x12!\n" +
-	"\fspend_pubkey\x18\x04 \x01(\fR\vspendPubkey\"\x8b\x01\n" +
-	"\x14PsbtAddPegoutRequest\x12\x19\n" +
-	"\bpsbt_b64\x18\x01 \x01(\tR\apsbtB64\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\x03R\x05value\x12\x1b\n" +
-	"\tpk_script\x18\x03 \x01(\fR\bpkScript\x12%\n" +
-	"\x0ffee_rate_per_kb\x18\x04 \x01(\x04R\ffeeRatePerKb\"5\n" +
+	"\bpsbt_b64\x18\x01 \x01(\tR\apsbtB64\x12,\n" +
+	"\trecipient\x18\x02 \x01(\v2\x0e.PsbtRecipientR\trecipient\x12%\n" +
+	"\x0ffee_rate_per_kb\x18\x03 \x01(\x04R\ffeeRatePerKb\"5\n" +
 	"\x18PsbtGetRecipientsRequest\x12\x19\n" +
 	"\bpsbt_b64\x18\x01 \x01(\tR\apsbtB64\"~\n" +
 	"\x19PsbtGetRecipientsResponse\x12,\n" +
@@ -1701,7 +1612,7 @@ const file_mwebd_proto_rawDesc = "" +
 	"\n" +
 	"addr_index\x18\x04 \x01(\rR\taddrIndex\"/\n" +
 	"\x10CoinswapResponse\x12\x1b\n" +
-	"\toutput_id\x18\x01 \x01(\tR\boutputId2\xa8\x06\n" +
+	"\toutput_id\x18\x01 \x01(\tR\boutputId2\xf1\x05\n" +
 	"\x03Rpc\x12)\n" +
 	"\x06Status\x12\x0e.StatusRequest\x1a\x0f.StatusResponse\x12\x1f\n" +
 	"\x05Utxos\x12\r.UtxosRequest\x1a\x05.Utxo0\x01\x12.\n" +
@@ -1711,8 +1622,7 @@ const file_mwebd_proto_rawDesc = "" +
 	"\n" +
 	"PsbtCreate\x12\x12.PsbtCreateRequest\x1a\r.PsbtResponse\x123\n" +
 	"\fPsbtAddInput\x12\x14.PsbtAddInputRequest\x1a\r.PsbtResponse\x12;\n" +
-	"\x10PsbtAddRecipient\x12\x18.PsbtAddRecipientRequest\x1a\r.PsbtResponse\x125\n" +
-	"\rPsbtAddPegout\x12\x15.PsbtAddPegoutRequest\x1a\r.PsbtResponse\x12J\n" +
+	"\x10PsbtAddRecipient\x12\x18.PsbtAddRecipientRequest\x1a\r.PsbtResponse\x12J\n" +
 	"\x11PsbtGetRecipients\x12\x19.PsbtGetRecipientsRequest\x1a\x1a.PsbtGetRecipientsResponse\x12+\n" +
 	"\bPsbtSign\x12\x10.PsbtSignRequest\x1a\r.PsbtResponse\x129\n" +
 	"\x0fPsbtSignNonMweb\x12\x17.PsbtSignNonMwebRequest\x1a\r.PsbtResponse\x123\n" +
@@ -1733,7 +1643,7 @@ func file_mwebd_proto_rawDescGZIP() []byte {
 	return file_mwebd_proto_rawDescData
 }
 
-var file_mwebd_proto_msgTypes = make([]protoimpl.MessageInfo, 27)
+var file_mwebd_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
 var file_mwebd_proto_goTypes = []any{
 	(*StatusRequest)(nil),             // 0: StatusRequest
 	(*StatusResponse)(nil),            // 1: StatusResponse
@@ -1751,37 +1661,36 @@ var file_mwebd_proto_goTypes = []any{
 	(*PsbtResponse)(nil),              // 13: PsbtResponse
 	(*PsbtAddInputRequest)(nil),       // 14: PsbtAddInputRequest
 	(*PsbtAddRecipientRequest)(nil),   // 15: PsbtAddRecipientRequest
-	(*PsbtAddPegoutRequest)(nil),      // 16: PsbtAddPegoutRequest
-	(*PsbtGetRecipientsRequest)(nil),  // 17: PsbtGetRecipientsRequest
-	(*PsbtGetRecipientsResponse)(nil), // 18: PsbtGetRecipientsResponse
-	(*PsbtRecipient)(nil),             // 19: PsbtRecipient
-	(*PsbtSignRequest)(nil),           // 20: PsbtSignRequest
-	(*PsbtSignNonMwebRequest)(nil),    // 21: PsbtSignNonMwebRequest
-	(*PsbtExtractRequest)(nil),        // 22: PsbtExtractRequest
-	(*BroadcastRequest)(nil),          // 23: BroadcastRequest
-	(*BroadcastResponse)(nil),         // 24: BroadcastResponse
-	(*CoinswapRequest)(nil),           // 25: CoinswapRequest
-	(*CoinswapResponse)(nil),          // 26: CoinswapResponse
+	(*PsbtGetRecipientsRequest)(nil),  // 16: PsbtGetRecipientsRequest
+	(*PsbtGetRecipientsResponse)(nil), // 17: PsbtGetRecipientsResponse
+	(*PsbtRecipient)(nil),             // 18: PsbtRecipient
+	(*PsbtSignRequest)(nil),           // 19: PsbtSignRequest
+	(*PsbtSignNonMwebRequest)(nil),    // 20: PsbtSignNonMwebRequest
+	(*PsbtExtractRequest)(nil),        // 21: PsbtExtractRequest
+	(*BroadcastRequest)(nil),          // 22: BroadcastRequest
+	(*BroadcastResponse)(nil),         // 23: BroadcastResponse
+	(*CoinswapRequest)(nil),           // 24: CoinswapRequest
+	(*CoinswapResponse)(nil),          // 25: CoinswapResponse
 }
 var file_mwebd_proto_depIdxs = []int32{
 	12, // 0: PsbtCreateRequest.witness_utxo:type_name -> TxOut
-	19, // 1: PsbtGetRecipientsResponse.recipient:type_name -> PsbtRecipient
-	0,  // 2: Rpc.Status:input_type -> StatusRequest
-	2,  // 3: Rpc.Utxos:input_type -> UtxosRequest
-	4,  // 4: Rpc.Addresses:input_type -> AddressRequest
-	7,  // 5: Rpc.Spent:input_type -> SpentRequest
-	9,  // 6: Rpc.Create:input_type -> CreateRequest
-	11, // 7: Rpc.PsbtCreate:input_type -> PsbtCreateRequest
-	14, // 8: Rpc.PsbtAddInput:input_type -> PsbtAddInputRequest
-	15, // 9: Rpc.PsbtAddRecipient:input_type -> PsbtAddRecipientRequest
-	16, // 10: Rpc.PsbtAddPegout:input_type -> PsbtAddPegoutRequest
-	17, // 11: Rpc.PsbtGetRecipients:input_type -> PsbtGetRecipientsRequest
-	20, // 12: Rpc.PsbtSign:input_type -> PsbtSignRequest
-	21, // 13: Rpc.PsbtSignNonMweb:input_type -> PsbtSignNonMwebRequest
-	22, // 14: Rpc.PsbtExtract:input_type -> PsbtExtractRequest
+	18, // 1: PsbtAddRecipientRequest.recipient:type_name -> PsbtRecipient
+	18, // 2: PsbtGetRecipientsResponse.recipient:type_name -> PsbtRecipient
+	0,  // 3: Rpc.Status:input_type -> StatusRequest
+	2,  // 4: Rpc.Utxos:input_type -> UtxosRequest
+	4,  // 5: Rpc.Addresses:input_type -> AddressRequest
+	7,  // 6: Rpc.Spent:input_type -> SpentRequest
+	9,  // 7: Rpc.Create:input_type -> CreateRequest
+	11, // 8: Rpc.PsbtCreate:input_type -> PsbtCreateRequest
+	14, // 9: Rpc.PsbtAddInput:input_type -> PsbtAddInputRequest
+	15, // 10: Rpc.PsbtAddRecipient:input_type -> PsbtAddRecipientRequest
+	16, // 11: Rpc.PsbtGetRecipients:input_type -> PsbtGetRecipientsRequest
+	19, // 12: Rpc.PsbtSign:input_type -> PsbtSignRequest
+	20, // 13: Rpc.PsbtSignNonMweb:input_type -> PsbtSignNonMwebRequest
+	21, // 14: Rpc.PsbtExtract:input_type -> PsbtExtractRequest
 	6,  // 15: Rpc.LedgerExchange:input_type -> LedgerApdu
-	23, // 16: Rpc.Broadcast:input_type -> BroadcastRequest
-	25, // 17: Rpc.Coinswap:input_type -> CoinswapRequest
+	22, // 16: Rpc.Broadcast:input_type -> BroadcastRequest
+	24, // 17: Rpc.Coinswap:input_type -> CoinswapRequest
 	1,  // 18: Rpc.Status:output_type -> StatusResponse
 	3,  // 19: Rpc.Utxos:output_type -> Utxo
 	5,  // 20: Rpc.Addresses:output_type -> AddressResponse
@@ -1790,19 +1699,18 @@ var file_mwebd_proto_depIdxs = []int32{
 	13, // 23: Rpc.PsbtCreate:output_type -> PsbtResponse
 	13, // 24: Rpc.PsbtAddInput:output_type -> PsbtResponse
 	13, // 25: Rpc.PsbtAddRecipient:output_type -> PsbtResponse
-	13, // 26: Rpc.PsbtAddPegout:output_type -> PsbtResponse
-	18, // 27: Rpc.PsbtGetRecipients:output_type -> PsbtGetRecipientsResponse
-	13, // 28: Rpc.PsbtSign:output_type -> PsbtResponse
-	13, // 29: Rpc.PsbtSignNonMweb:output_type -> PsbtResponse
-	10, // 30: Rpc.PsbtExtract:output_type -> CreateResponse
-	6,  // 31: Rpc.LedgerExchange:output_type -> LedgerApdu
-	24, // 32: Rpc.Broadcast:output_type -> BroadcastResponse
-	26, // 33: Rpc.Coinswap:output_type -> CoinswapResponse
-	18, // [18:34] is the sub-list for method output_type
-	2,  // [2:18] is the sub-list for method input_type
-	2,  // [2:2] is the sub-list for extension type_name
-	2,  // [2:2] is the sub-list for extension extendee
-	0,  // [0:2] is the sub-list for field type_name
+	17, // 26: Rpc.PsbtGetRecipients:output_type -> PsbtGetRecipientsResponse
+	13, // 27: Rpc.PsbtSign:output_type -> PsbtResponse
+	13, // 28: Rpc.PsbtSignNonMweb:output_type -> PsbtResponse
+	10, // 29: Rpc.PsbtExtract:output_type -> CreateResponse
+	6,  // 30: Rpc.LedgerExchange:output_type -> LedgerApdu
+	23, // 31: Rpc.Broadcast:output_type -> BroadcastResponse
+	25, // 32: Rpc.Coinswap:output_type -> CoinswapResponse
+	18, // [18:33] is the sub-list for method output_type
+	3,  // [3:18] is the sub-list for method input_type
+	3,  // [3:3] is the sub-list for extension type_name
+	3,  // [3:3] is the sub-list for extension extendee
+	0,  // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_mwebd_proto_init() }
@@ -1816,7 +1724,7 @@ func file_mwebd_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_mwebd_proto_rawDesc), len(file_mwebd_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   27,
+			NumMessages:   26,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

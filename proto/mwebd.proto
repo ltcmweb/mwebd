@@ -31,11 +31,8 @@ service Rpc {
     // Add a MWEB input to a PSBT.
     rpc PsbtAddInput(PsbtAddInputRequest) returns (PsbtResponse);
 
-    // Add a MWEB recipient to a PSBT.
+    // Add a recipient to a PSBT.
     rpc PsbtAddRecipient(PsbtAddRecipientRequest) returns (PsbtResponse);
-
-    // Add a MWEB peg-out to a PSBT.
-    rpc PsbtAddPegout(PsbtAddPegoutRequest) returns (PsbtResponse);
 
     // Get the recipients of a PSBT.
     rpc PsbtGetRecipients(PsbtGetRecipientsRequest) returns (PsbtGetRecipientsResponse);
@@ -224,28 +221,10 @@ message PsbtAddRecipientRequest {
     // The PSBT in base64 encoding.
     string psbt_b64 = 1;
 
-    // The value to send.
-    int64 value = 2;
-
-    // The scan public key of the recipient address.
-    bytes scan_pubkey = 3;
-
-    // The spend public key of the recipient address.
-    bytes spend_pubkey = 4;
-}
-
-message PsbtAddPegoutRequest {
-    // The PSBT in base64 encoding.
-    string psbt_b64 = 1;
-
-    // The value to send.
-    int64 value = 2;
-
-    // The pk script to peg-out to.
-    bytes pk_script = 3;
+    PsbtRecipient recipient = 2;
 
     // The fee rate per KB in litoshis.
-    uint64 fee_rate_per_kb = 4;
+    uint64 fee_rate_per_kb = 3;
 }
 
 message PsbtGetRecipientsRequest {

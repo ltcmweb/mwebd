@@ -130,43 +130,34 @@ func (s *Server) PsbtAddRecipient(ctx context.Context,
 		return nil, err
 	}
 
-	p.Outputs = append(p.Outputs, psbt.POutput{
-		Amount: ltcutil.Amount(req.Value),
-		StealthAddress: &mw.StealthAddress{
-			Scan:  (*mw.PublicKey)(req.ScanPubkey),
-			Spend: (*mw.PublicKey)(req.SpendPubkey),
-		},
-	})
-
-	index := s.getKernelIndex(p)
-	*p.Kernels[index].Fee += mweb.StandardOutputWeight * mweb.BaseMwebFee
-
-	s.addPeginIfNecessary(p)
-
-	b64, err := p.B64Encode()
-	if err != nil {
-		return nil, err
-	}
-	return &proto.PsbtResponse{PsbtB64: b64}, nil
-}
-
-func (s *Server) PsbtAddPegout(ctx context.Context,
-	req *proto.PsbtAddPegoutRequest) (*proto.PsbtResponse, error) {
-
-	p, err := psbt.NewFromRawBytes(strings.NewReader(req.PsbtB64), true)
+	chainParams := s.cs.ChainParams()
+	addr, err := ltcutil.DecodeAddress(req.Recipient.Address, &chainParams)
 	if err != nil {
 		return nil, err
 	}
 
-	index := s.getKernelIndex(p)
-	txOut := wire.NewTxOut(req.Value, req.PkScript)
-	p.Kernels[index].PegOuts = append(p.Kernels[index].PegOuts, txOut)
+	var fee ltcutil.Amount
+	kernel := &p.Kernels[s.getKernelIndex(p)]
+	if mwebAddr, ok := addr.(*ltcutil.AddressMweb); ok {
+		p.Outputs = append(p.Outputs, psbt.POutput{
+			Amount:         ltcutil.Amount(req.Recipient.Value),
+			StealthAddress: mwebAddr.StealthAddress(),
+		})
+		fee = mweb.StandardOutputWeight * mweb.BaseMwebFee
+	} else {
+		pkScript, err := txscript.PayToAddrScript(addr)
+		if err != nil {
+			return nil, err
+		}
+		txOut := wire.NewTxOut(req.Recipient.Value, pkScript)
+		kernel.PegOuts = append(kernel.PegOuts, txOut)
 
-	fee := ltcutil.Amount(math.Ceil(float64(req.FeeRatePerKb) *
-		float64(txOut.SerializeSize()) / 1000))
-	fee += ltcutil.Amount(len(req.PkScript)+mweb.BytesPerWeight-1) /
-		mweb.BytesPerWeight * mweb.BaseMwebFee
-	*p.Kernels[index].Fee += fee
+		fee = ltcutil.Amount(len(pkScript)+mweb.BytesPerWeight-1) /
+			mweb.BytesPerWeight * mweb.BaseMwebFee
+		fee += ltcutil.Amount(math.Ceil(float64(req.FeeRatePerKb) *
+			float64(txOut.SerializeSize()) / 1000))
+	}
+	*kernel.Fee += fee
 
 	s.addPeginIfNecessary(p)
 
