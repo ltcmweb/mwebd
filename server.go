@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -56,7 +57,9 @@ func NewServer(chain, dataDir, peer string) (*Server, error) {
 }
 
 func NewServer2(args *ServerArgs) (s *Server, err error) {
-	s = &Server{}
+	s = &Server{server: grpc.NewServer()}
+	proto.RegisterRpcServer(s.server, s)
+
 	s.utxoChan = map[mw.SecretKey]map[*utxoStreamer]struct{}{}
 	s.coinCache, _ = lru.New[mw.SecretKey, *lru.Cache[chainhash.Hash, *mweb.Coin]](10)
 
@@ -124,15 +127,21 @@ func (s *Server) StartAddr(addr string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-
-	s.server = grpc.NewServer()
-	proto.RegisterRpcServer(s.server, s)
-
 	if addr[len(addr)-2:] == ":0" {
 		go s.serve(lis)
 		return lis.Addr().(*net.TCPAddr).Port, nil
 	}
 	return 0, s.serve(lis)
+}
+
+func (s *Server) StartUnix(path string) error {
+	os.Remove(path)
+	lis, err := net.Listen("unix", path)
+	if err != nil {
+		return err
+	}
+	go s.serve(lis)
+	return nil
 }
 
 func (s *Server) serve(lis net.Listener) error {
