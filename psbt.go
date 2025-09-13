@@ -244,13 +244,14 @@ func (s *Server) PsbtGetRecipients(ctx context.Context,
 			if addr, err = pkScriptToAddr(pInput.WitnessUtxo.PkScript); err != nil {
 				return nil, err
 			}
-			resp.InputPubkey = append(resp.InputPubkey, addr.ScriptAddress())
+			resp.InputAddress = append(resp.InputAddress, addr.String())
 			resp.Fee += pInput.WitnessUtxo.Value
 		case pInput.MwebAmount != nil:
-			resp.InputPubkey = append(resp.InputPubkey, nil)
+			outputId := hex.EncodeToString(pInput.MwebOutputId[:])
+			resp.InputAddress = append(resp.InputAddress, outputId)
 			resp.Fee += int64(*pInput.MwebAmount)
 		default:
-			resp.InputPubkey = append(resp.InputPubkey, nil)
+			resp.InputAddress = append(resp.InputAddress, "")
 		}
 	}
 

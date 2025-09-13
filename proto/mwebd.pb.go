@@ -1011,7 +1011,7 @@ func (x *PsbtGetRecipientsRequest) GetPsbtB64() string {
 type PsbtGetRecipientsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Recipient     []*PsbtRecipient       `protobuf:"bytes,1,rep,name=recipient,proto3" json:"recipient,omitempty"`
-	InputPubkey   [][]byte               `protobuf:"bytes,2,rep,name=input_pubkey,json=inputPubkey,proto3" json:"input_pubkey,omitempty"`
+	InputAddress  []string               `protobuf:"bytes,2,rep,name=input_address,json=inputAddress,proto3" json:"input_address,omitempty"`
 	Fee           int64                  `protobuf:"varint,3,opt,name=fee,proto3" json:"fee,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1054,9 +1054,9 @@ func (x *PsbtGetRecipientsResponse) GetRecipient() []*PsbtRecipient {
 	return nil
 }
 
-func (x *PsbtGetRecipientsResponse) GetInputPubkey() [][]byte {
+func (x *PsbtGetRecipientsResponse) GetInputAddress() []string {
 	if x != nil {
-		return x.InputPubkey
+		return x.InputAddress
 	}
 	return nil
 }
@@ -1580,10 +1580,10 @@ const file_mwebd_proto_rawDesc = "" +
 	"\trecipient\x18\x02 \x01(\v2\x0e.PsbtRecipientR\trecipient\x12%\n" +
 	"\x0ffee_rate_per_kb\x18\x03 \x01(\x04R\ffeeRatePerKb\"5\n" +
 	"\x18PsbtGetRecipientsRequest\x12\x19\n" +
-	"\bpsbt_b64\x18\x01 \x01(\tR\apsbtB64\"~\n" +
+	"\bpsbt_b64\x18\x01 \x01(\tR\apsbtB64\"\x80\x01\n" +
 	"\x19PsbtGetRecipientsResponse\x12,\n" +
-	"\trecipient\x18\x01 \x03(\v2\x0e.PsbtRecipientR\trecipient\x12!\n" +
-	"\finput_pubkey\x18\x02 \x03(\fR\vinputPubkey\x12\x10\n" +
+	"\trecipient\x18\x01 \x03(\v2\x0e.PsbtRecipientR\trecipient\x12#\n" +
+	"\rinput_address\x18\x02 \x03(\tR\finputAddress\x12\x10\n" +
 	"\x03fee\x18\x03 \x01(\x03R\x03fee\"?\n" +
 	"\rPsbtRecipient\x12\x18\n" +
 	"\aaddress\x18\x01 \x01(\tR\aaddress\x12\x14\n" +
