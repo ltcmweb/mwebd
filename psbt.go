@@ -223,63 +223,69 @@ func (s *Server) PsbtGetRecipients(ctx context.Context,
 		return nil, err
 	}
 
-	var addr ltcutil.Address
 	chainParams := s.cs.ChainParams()
 	resp := &proto.PsbtGetRecipientsResponse{}
 
-	pkScriptToAddr := func(pkScript []byte) (ltcutil.Address, error) {
-		_, addr, n, err := txscript.ExtractPkScriptAddrs(pkScript, &chainParams)
+	pkScriptToAddr := func(pkScript []byte) (string, error) {
+		_, addrs, _, err := txscript.ExtractPkScriptAddrs(pkScript, &chainParams)
 		if err != nil {
-			return nil, err
+			return "", err
 		}
-		if n != 1 {
-			return nil, errors.New("pkscript doesn't encode just one address")
+		var addrs2 []string
+		for _, addr := range addrs {
+			addrs2 = append(addrs2, addr.String())
 		}
-		return addr[0], nil
+		return strings.Join(addrs2, ","), nil
 	}
 
 	for _, pInput := range p.Inputs {
+		var addr string
 		switch {
 		case pInput.WitnessUtxo != nil:
-			if addr, err = pkScriptToAddr(pInput.WitnessUtxo.PkScript); err != nil {
-				return nil, err
-			}
-			resp.InputAddress = append(resp.InputAddress, addr.String())
+			addr, _ = pkScriptToAddr(pInput.WitnessUtxo.PkScript)
 			resp.Fee += pInput.WitnessUtxo.Value
-		case pInput.MwebAmount != nil:
-			outputId := hex.EncodeToString(pInput.MwebOutputId[:])
-			resp.InputAddress = append(resp.InputAddress, outputId)
-			resp.Fee += int64(*pInput.MwebAmount)
-		default:
-			resp.InputAddress = append(resp.InputAddress, "")
+		case pInput.MwebOutputId != nil:
+			addr = hex.EncodeToString(pInput.MwebOutputId[:])
 		}
+		resp.InputAddress = append(resp.InputAddress, addr)
 	}
 
 	for _, pOutput := range p.Outputs {
-		if pOutput.StealthAddress != nil {
-			addr = ltcutil.NewAddressMweb(pOutput.StealthAddress, &chainParams)
-		} else {
+		var addr string
+		switch {
+		case pOutput.StealthAddress != nil:
+			addr = ltcutil.NewAddressMweb(
+				pOutput.StealthAddress, &chainParams).String()
+		case pOutput.OutputCommit != nil:
+			addr = chainParams.Bech32HRPMweb + "1"
+		default:
 			if addr, err = pkScriptToAddr(pOutput.PKScript); err != nil {
 				return nil, err
 			}
+			resp.Fee -= int64(pOutput.Amount)
 		}
 		resp.Recipient = append(resp.Recipient, &proto.PsbtRecipient{
-			Address: addr.String(),
+			Address: addr,
 			Value:   int64(pOutput.Amount),
 		})
-		resp.Fee -= int64(pOutput.Amount)
 	}
 
 	for _, pKernel := range p.Kernels {
 		for _, pegout := range pKernel.PegOuts {
-			if addr, err = pkScriptToAddr(pegout.PkScript); err != nil {
+			addr, err := pkScriptToAddr(pegout.PkScript)
+			if err != nil {
 				return nil, err
 			}
 			resp.Recipient = append(resp.Recipient, &proto.PsbtRecipient{
-				Address: addr.String(),
+				Address: addr,
 				Value:   pegout.Value,
 			})
-			resp.Fee -= pegout.Value
+		}
+		if pKernel.Fee != nil {
+			resp.Fee += int64(*pKernel.Fee)
+		}
+		if pKernel.PeginAmount != nil {
+			resp.Fee -= int64(*pKernel.PeginAmount)
 		}
 	}
 
