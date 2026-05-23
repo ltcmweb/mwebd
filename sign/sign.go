@@ -1,6 +1,7 @@
 package sign
 
 import (
+	"bytes"
 	"encoding/hex"
 	"errors"
 	"strings"
@@ -14,41 +15,6 @@ import (
 	"github.com/ltcmweb/ltcd/ltcutil/psbt"
 	"github.com/ltcmweb/ltcd/txscript"
 	"github.com/ltcmweb/ltcd/wire"
-)
-
-type (
-	AddressesRequest struct {
-		Scan, SpendPub []byte `json:""`
-		From, To       uint32 `json:""`
-	}
-	AddressesPubKeyHashRequest struct {
-		XPub     string `json:""`
-		From, To uint32 `json:""`
-	}
-	AddressesResponse struct {
-		Address []string `json:""`
-	}
-	Psbt struct {
-		PsbtB64 string `json:""`
-	}
-	Recipient struct {
-		Address string `json:""`
-		Value   int64  `json:""`
-	}
-	PsbtGetRecipientsResponse struct {
-		Recipient    []*Recipient `json:""`
-		InputAddress []string     `json:""`
-		Fee          int64        `json:""`
-	}
-	PsbtSignRequest struct {
-		PsbtB64     string `json:""`
-		Scan, Spend []byte `json:""`
-	}
-	PsbtSignPubKeyHashRequest struct {
-		PsbtB64 string `json:""`
-		PrivKey []byte `json:""`
-		Index   uint32 `json:""`
-	}
 )
 
 func Addresses(req *AddressesRequest,
@@ -87,7 +53,7 @@ func AddressesPubKeyHash(req *AddressesPubKeyHashRequest,
 func PsbtGetRecipients(req *Psbt, cp *chaincfg.Params) (
 	resp PsbtGetRecipientsResponse, err error) {
 
-	p, err := psbt.NewFromRawBytes(strings.NewReader(req.PsbtB64), true)
+	p, err := psbt.NewFromRawBytes(bytes.NewReader(req.Psbt), false)
 	if err != nil {
 		return
 	}
@@ -129,7 +95,7 @@ func PsbtGetRecipients(req *Psbt, cp *chaincfg.Params) (
 			}
 			resp.Fee -= int64(pOutput.Amount)
 		}
-		resp.Recipient = append(resp.Recipient, &Recipient{
+		resp.Recipient = append(resp.Recipient, Recipient{
 			Address: addr,
 			Value:   int64(pOutput.Amount),
 		})
@@ -141,7 +107,7 @@ func PsbtGetRecipients(req *Psbt, cp *chaincfg.Params) (
 			if err != nil {
 				return resp, err
 			}
-			resp.Recipient = append(resp.Recipient, &Recipient{
+			resp.Recipient = append(resp.Recipient, Recipient{
 				Address: addr,
 				Value:   pegout.Value,
 			})
@@ -158,7 +124,7 @@ func PsbtGetRecipients(req *Psbt, cp *chaincfg.Params) (
 }
 
 func PsbtSign(req *PsbtSignRequest) (resp Psbt, err error) {
-	p, err := psbt.NewFromRawBytes(strings.NewReader(req.PsbtB64), true)
+	p, err := psbt.NewFromRawBytes(bytes.NewReader(req.Psbt), false)
 	if err != nil {
 		return
 	}
@@ -203,12 +169,12 @@ func PsbtSign(req *PsbtSignRequest) (resp Psbt, err error) {
 		return
 	}
 
-	resp.PsbtB64, err = p.B64Encode()
+	resp.Psbt, err = psbtSerialize(p)
 	return
 }
 
 func PsbtSignPubKeyHash(req *PsbtSignPubKeyHashRequest) (resp Psbt, err error) {
-	p, err := psbt.NewFromRawBytes(strings.NewReader(req.PsbtB64), true)
+	p, err := psbt.NewFromRawBytes(bytes.NewReader(req.Psbt), false)
 	if err != nil {
 		return
 	}
@@ -231,7 +197,7 @@ func PsbtSignPubKeyHash(req *PsbtSignPubKeyHashRequest) (resp Psbt, err error) {
 	}
 
 	txOut := p.Inputs[req.Index].WitnessUtxo
-	key, pub := btcec.PrivKeyFromBytes(req.PrivKey)
+	key, pub := btcec.PrivKeyFromBytes(req.Key)
 	sig, err := txscript.RawTxInWitnessSignature(tx,
 		txscript.NewTxSigHashes(tx, fetcher), txInIdx,
 		txOut.Value, txOut.PkScript, txscript.SigHashAll, key)
@@ -248,6 +214,31 @@ func PsbtSignPubKeyHash(req *PsbtSignPubKeyHashRequest) (resp Psbt, err error) {
 		return
 	}
 
-	resp.PsbtB64, err = p.B64Encode()
+	resp.Psbt, err = psbtSerialize(p)
 	return
+}
+
+func PsbtFinalize(req *Psbt) (resp Psbt, err error) {
+	p, err := psbt.NewFromRawBytes(bytes.NewReader(req.Psbt), false)
+	if err != nil {
+		return
+	}
+	if err = psbt.MaybeFinalizeAll(p); err != nil {
+		return
+	}
+
+	resp.Psbt, err = psbtSerialize(p)
+	return
+}
+
+func psbtSerialize(p *psbt.Packet) (psbt []byte, err error) {
+	var cw CountWriter
+	if err = p.Serialize(&cw); err != nil {
+		return
+	}
+	buf := bytes.NewBuffer(make([]byte, 0, cw.Len))
+	if err = p.Serialize(buf); err != nil {
+		return
+	}
+	return buf.Bytes(), nil
 }
