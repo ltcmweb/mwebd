@@ -2,9 +2,8 @@ package sign
 
 import "io"
 
-type Message interface {
+type Serializer interface {
 	Serialize(io.Writer) error
-	Deserialize(io.Reader) error
 }
 
 type AddressesRequest struct {

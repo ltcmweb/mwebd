@@ -123,7 +123,7 @@ func PsbtGetRecipients(req *Psbt, cp *chaincfg.Params) (
 	return
 }
 
-func PsbtSign(req *PsbtSignRequest) (resp Psbt, err error) {
+func PsbtSign(req *PsbtSignRequest) (resp *psbt.Packet, err error) {
 	p, err := psbt.NewFromRawBytes(bytes.NewReader(req.Psbt), false)
 	if err != nil {
 		return
@@ -169,11 +169,10 @@ func PsbtSign(req *PsbtSignRequest) (resp Psbt, err error) {
 		return
 	}
 
-	resp.Psbt, err = psbtSerialize(p)
-	return
+	return p, nil
 }
 
-func PsbtSignPubKeyHash(req *PsbtSignPubKeyHashRequest) (resp Psbt, err error) {
+func PsbtSignPubKeyHash(req *PsbtSignPubKeyHashRequest) (resp *psbt.Packet, err error) {
 	p, err := psbt.NewFromRawBytes(bytes.NewReader(req.Psbt), false)
 	if err != nil {
 		return
@@ -214,11 +213,10 @@ func PsbtSignPubKeyHash(req *PsbtSignPubKeyHashRequest) (resp Psbt, err error) {
 		return
 	}
 
-	resp.Psbt, err = psbtSerialize(p)
-	return
+	return p, nil
 }
 
-func PsbtFinalize(req *Psbt) (resp Psbt, err error) {
+func PsbtFinalize(req *Psbt) (resp *psbt.Packet, err error) {
 	p, err := psbt.NewFromRawBytes(bytes.NewReader(req.Psbt), false)
 	if err != nil {
 		return
@@ -227,18 +225,5 @@ func PsbtFinalize(req *Psbt) (resp Psbt, err error) {
 		return
 	}
 
-	resp.Psbt, err = psbtSerialize(p)
-	return
-}
-
-func psbtSerialize(p *psbt.Packet) (psbt []byte, err error) {
-	var cw CountWriter
-	if err = p.Serialize(&cw); err != nil {
-		return
-	}
-	buf := bytes.NewBuffer(make([]byte, 0, cw.Len))
-	if err = p.Serialize(buf); err != nil {
-		return
-	}
-	return buf.Bytes(), nil
+	return p, nil
 }
